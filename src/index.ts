@@ -23,7 +23,7 @@ import {
 } from './tools/enhance.js';
 import { createStyle } from './tools/styles.js';
 import { downloadImage } from './tools/download.js';
-import { generateAsset, batchGenerateAssets } from './tools/pipeline.js';
+import { generateAsset, batchGenerateAssets, generateThemedSet } from './tools/pipeline.js';
 
 import { RecraftClientError } from './client.js';
 import { MODELS, SUPPORTED_SIZES, SUPPORTED_RATIOS, ALL_STYLES, STYLE_BASE_TYPES } from './constants.js';
@@ -31,7 +31,7 @@ import { MODELS, SUPPORTED_SIZES, SUPPORTED_RATIOS, ALL_STYLES, STYLE_BASE_TYPES
 const server = new McpServer({
   name: 'recraft-mcp-server',
   version: '1.0.0',
-  description: 'Recraft AI Image Generation MCP Server — Generate, transform, vectorize, upscale images with 16 tools.',
+  description: 'Recraft AI Image Generation MCP Server — Generate, transform, vectorize, upscale images with 17 tools.',
 });
 
 // ─── Error handling ─────────────────────────────────────────────────────────
@@ -473,6 +473,37 @@ server.tool(
   async ({ assets }) => {
     try {
       const result = await batchGenerateAssets(assets);
+      return { content: [{ type: 'text', text: result }] };
+    } catch (e) {
+      return { content: [{ type: 'text', text: handleError(e) }], isError: true };
+    }
+  },
+);
+
+// =============================================================================
+// 17. GENERATE THEMED SET (GAME DESIGN PIPELINE)
+// =============================================================================
+
+server.tool(
+  'recraft_generate_themed_set',
+  'Generate a complete themed asset set for game design. Creates a hero asset, builds a custom style from it, then generates all remaining symbols with visual consistency. Optionally generates background and outputs a Pixi.js-compatible asset manifest.',
+  {
+    theme: z.string().describe('Theme name (e.g., "Egyptian", "Viking", "Space")'),
+    prompt_suffix: z.string().describe('Suffix appended to every symbol prompt for consistent style (e.g., ", ultra detailed 3D render, polished metallic surface, dramatic volumetric lighting from above, centered composition on pure black background, no text, no letters, sharp focus, cinematic lighting")'),
+    symbols: z.array(z.object({
+      name: z.string().describe('Symbol filename without extension (e.g., "scarab", "ankh")'),
+      prompt_detail: z.string().describe('Symbol-specific prompt prefix (e.g., "A golden scarab beetle amulet")'),
+    })).min(1).describe('Array of symbols to generate'),
+    output_dir: z.string().describe('Base output directory (symbols/ and ui/ subdirs will be created)'),
+    size: sizeSchema,
+    remove_bg: z.boolean().default(true).describe('Remove background from symbols (default: true)'),
+    bg_prompt: z.string().optional().describe('Background image prompt (if omitted, no background is generated)'),
+    bg_size: z.string().default('1344x768').describe('Background image size (default: 1344x768 / 16:9)'),
+    generate_manifest: z.boolean().default(true).describe('Generate asset-manifest.json for Pixi.js integration'),
+  },
+  async (params) => {
+    try {
+      const result = await generateThemedSet(params);
       return { content: [{ type: 'text', text: result }] };
     } catch (e) {
       return { content: [{ type: 'text', text: handleError(e) }], isError: true };

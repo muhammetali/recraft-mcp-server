@@ -9,6 +9,7 @@ import {
   validateColors,
   validateArtisticLevel,
   validateResponseFormat,
+  resolveSize,
 } from '../validation.js';
 
 export interface TextLayout {
@@ -67,10 +68,12 @@ export async function generateImage(params: GenerateImageParams): Promise<string
     throw new Error('Cannot specify both style and style_id. Use one or the other.');
   }
 
+  const resolvedSize = resolveSize(size, model);
+
   const body: Record<string, any> = {
     prompt,
     model,
-    size,
+    size: resolvedSize,
     n,
     response_format,
   };

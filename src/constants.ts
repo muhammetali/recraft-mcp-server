@@ -53,9 +53,6 @@ export const SUPPORTED_SIZES = [
   '736x1472',
   '1824x608',
   '608x1824',
-  '1820x1024',
-  '1024x1820',
-  '1536x1024',
 ] as const;
 export type SupportedSize = (typeof SUPPORTED_SIZES)[number];
 

@@ -3,7 +3,7 @@ import {
   validatePrompt, validateSize, validateModel, validateN,
   validateStyle, validateStyleBaseType, validateResponseFormat,
   validateFilePath, validateOutputPath, validateColors,
-  validateStrength, validateArtisticLevel, getMimeType,
+  validateStrength, validateArtisticLevel, getMimeType, resolveSize,
 } from '../validation.js';
 import { existsSync, statSync } from 'fs';
 
@@ -247,6 +247,38 @@ describe('validation', () => {
 
     it('handles uppercase extensions', () => {
       expect(getMimeType('/path/to/FILE.PNG')).toBe('image/png');
+    });
+  });
+
+  describe('resolveSize', () => {
+    it('returns standard sizes unchanged', () => {
+      expect(resolveSize('1024x1024')).toBe('1024x1024');
+      expect(resolveSize('1344x768')).toBe('1344x768');
+    });
+
+    it('returns ratios unchanged', () => {
+      expect(resolveSize('16:9')).toBe('16:9');
+      expect(resolveSize('1:1')).toBe('1:1');
+    });
+
+    it('maps 1820x1024 to 1344x768', () => {
+      expect(resolveSize('1820x1024')).toBe('1344x768');
+    });
+
+    it('maps 1024x1820 to 768x1344', () => {
+      expect(resolveSize('1024x1820')).toBe('768x1344');
+    });
+
+    it('maps 1536x1024 to 1152x896', () => {
+      expect(resolveSize('1536x1024')).toBe('1152x896');
+    });
+
+    it('maps 1024x1536 to 896x1152', () => {
+      expect(resolveSize('1024x1536')).toBe('896x1152');
+    });
+
+    it('returns unknown sizes unchanged (validation catches them)', () => {
+      expect(resolveSize('999x999')).toBe('999x999');
     });
   });
 });

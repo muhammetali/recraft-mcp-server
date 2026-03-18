@@ -49,6 +49,31 @@ export function validateSize(size: string): void {
   }
 }
 
+// Size fallback map: non-standard sizes → nearest supported equivalent
+const SIZE_FALLBACK: Record<string, string> = {
+  '1820x1024': '1344x768',   // wide → 16:9
+  '1024x1820': '768x1344',   // tall → 9:16
+  '1536x1024': '1152x896',   // 3:2 approx → 4:3
+  '1024x1536': '896x1152',   // 2:3 approx → 3:4
+};
+
+/**
+ * Resolve a size string to a model-compatible size.
+ * If the requested size isn't supported by the model, returns the nearest fallback.
+ * Returns the original size if it's already valid.
+ */
+export function resolveSize(size: string, model?: string): string {
+  // Ratios are always accepted
+  if (size.includes(':')) return size;
+
+  // If it's in SUPPORTED_SIZES, it's fine — but API may still reject for specific models
+  // Apply fallback for known problematic sizes
+  const fallback = SIZE_FALLBACK[size];
+  if (fallback) return fallback;
+
+  return size;
+}
+
 export function validateModel(model: string): void {
   if (!MODELS.includes(model as any)) {
     throw new Error(`Unsupported model "${model}". Supported: ${MODELS.join(', ')}.`);
