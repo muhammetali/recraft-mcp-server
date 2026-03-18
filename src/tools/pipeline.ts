@@ -1,16 +1,9 @@
 import { writeFileSync, unlinkSync, existsSync, readFileSync, mkdirSync } from 'fs';
-import { dirname, join, basename } from 'path';
+import { dirname, join } from 'path';
 import { recraftPost, recraftPostMultipart, downloadToBuffer } from '../client.js';
 import { ENDPOINTS, BATCH_DELAY_MS } from '../constants.js';
-import { validatePrompt, validateSize, validateModel, validateOutputPath, getMimeType, resolveSize } from '../validation.js';
-
-interface GenerationResult {
-  data: Array<{ image_id: string; url: string }>;
-}
-
-interface BgRemoveResult {
-  image: { url: string };
-}
+import { validatePrompt, validateSize, validateModel, validateOutputPath, resolveSize } from '../validation.js';
+import type { GenerationResult, BgRemoveResult, CreateStyleResult } from '../types.js';
 
 export interface GenerateAssetParams {
   prompt: string;
@@ -163,10 +156,6 @@ export async function batchGenerateAssets(assets: BatchAssetItem[]): Promise<str
 }
 
 // ─── Themed Set Generation ──────────────────────────────────────────────────
-
-interface CreateStyleResult {
-  id: string;
-}
 
 export interface ThemedSetSymbol {
   name: string;

@@ -24,6 +24,7 @@ import {
 import { createStyle } from './tools/styles.js';
 import { downloadImage } from './tools/download.js';
 import { generateAsset, batchGenerateAssets, generateThemedSet } from './tools/pipeline.js';
+import { generateSized, compareStyles, textureSwap } from './tools/advanced.js';
 
 import { RecraftClientError } from './client.js';
 import { MODELS, SUPPORTED_SIZES, SUPPORTED_RATIOS, ALL_STYLES, STYLE_BASE_TYPES } from './constants.js';
@@ -31,7 +32,7 @@ import { MODELS, SUPPORTED_SIZES, SUPPORTED_RATIOS, ALL_STYLES, STYLE_BASE_TYPES
 const server = new McpServer({
   name: 'recraft-mcp-server',
   version: '1.0.0',
-  description: 'Recraft AI Image Generation MCP Server — Generate, transform, vectorize, upscale images with 17 tools.',
+  description: 'Recraft AI Image Generation MCP Server — Generate, transform, vectorize, upscale images with 20 tools.',
 });
 
 // ─── Error handling ─────────────────────────────────────────────────────────
@@ -504,6 +505,100 @@ server.tool(
   async (params) => {
     try {
       const result = await generateThemedSet(params);
+      return { content: [{ type: 'text', text: result }] };
+    } catch (e) {
+      return { content: [{ type: 'text', text: handleError(e) }], isError: true };
+    }
+  },
+);
+
+// =============================================================================
+// 18. GENERATE SIZED (SMALL SIZE SUPPORT)
+// =============================================================================
+
+server.tool(
+  'recraft_generate_sized',
+  'Generate an image at any target size (including small sizes like 64x64, 128x128, 256x256). Generates at API-compatible size, then resizes with Lanczos3 downsampling. Perfect for game sprites, icons, and UI elements.',
+  {
+    prompt: z.string().describe('Image description'),
+    width: z.number().int().min(1).max(4096).describe('Target width in pixels (e.g., 64, 128, 256)'),
+    height: z.number().int().min(1).max(4096).describe('Target height in pixels (e.g., 64, 128, 256)'),
+    output_path: z.string().describe('Where to save the final image'),
+    fit: z.enum(['contain', 'cover', 'fill']).default('contain')
+      .describe('Resize strategy: contain (letterbox), cover (crop to fill), fill (stretch)'),
+    model: modelSchema,
+    style: z.string().optional().describe('Style name (V3/V2 only)'),
+    style_id: z.string().optional().describe('Custom style UUID'),
+    negative_prompt: z.string().optional().describe('What to exclude'),
+    remove_bg: z.boolean().default(false).describe('Remove background before resize (default: false)'),
+  },
+  async (params) => {
+    try {
+      const result = await generateSized(params);
+      return { content: [{ type: 'text', text: result }] };
+    } catch (e) {
+      return { content: [{ type: 'text', text: handleError(e) }], isError: true };
+    }
+  },
+);
+
+// =============================================================================
+// 19. COMPARE STYLES (A/B TESTING)
+// =============================================================================
+
+server.tool(
+  'recraft_compare_styles',
+  'Generate the same prompt in multiple styles for side-by-side comparison. Creates individual images and an optional comparison grid. Great for choosing the best style for your project.',
+  {
+    prompt: z.string().describe('Image description to test across styles'),
+    styles: z.array(z.string()).min(2).max(10)
+      .describe('Array of style names to compare (e.g., ["digital_illustration", "pixel_art", "vector_art"])'),
+    output_dir: z.string().describe('Directory to save comparison images'),
+    size: sizeSchema,
+    model: z.string().default('recraftv3')
+      .describe('Model to use (V3 recommended for style support)'),
+    grid: z.boolean().default(true)
+      .describe('Generate a comparison grid image (default: true)'),
+    grid_columns: z.number().int().min(1).max(5).default(3)
+      .describe('Number of columns in grid (default: 3)'),
+  },
+  async (params) => {
+    try {
+      const result = await compareStyles(params);
+      return { content: [{ type: 'text', text: result }] };
+    } catch (e) {
+      return { content: [{ type: 'text', text: handleError(e) }], isError: true };
+    }
+  },
+);
+
+// =============================================================================
+// 20. TEXTURE SWAP (REGION REPLACE)
+// =============================================================================
+
+server.tool(
+  'recraft_texture_swap',
+  'Replace a specific region of an image with AI-generated content. Generates new content matching the region aspect ratio, resizes it, and composites it onto the original. Perfect for Spine atlas texture swaps and spritesheet updates.',
+  {
+    image_path: z.string().describe('Local path to source image (PNG/JPG/WEBP)'),
+    region: z.object({
+      x: z.number().int().min(0).describe('Region X offset in pixels'),
+      y: z.number().int().min(0).describe('Region Y offset in pixels'),
+      width: z.number().int().min(1).describe('Region width in pixels'),
+      height: z.number().int().min(1).describe('Region height in pixels'),
+    }).describe('Rectangle region to replace {x, y, width, height}'),
+    prompt: z.string().describe('Description of replacement content'),
+    output_path: z.string().describe('Where to save the result'),
+    model: modelSchema,
+    style: z.string().optional().describe('Style name (V3/V2 only)'),
+    style_id: z.string().optional().describe('Custom style UUID'),
+    negative_prompt: z.string().optional().describe('What to exclude'),
+    feather: z.number().int().min(0).max(64).default(0)
+      .describe('Edge feather in pixels for smooth blending (0=hard edge, default: 0)'),
+  },
+  async (params) => {
+    try {
+      const result = await textureSwap(params);
       return { content: [{ type: 'text', text: result }] };
     } catch (e) {
       return { content: [{ type: 'text', text: handleError(e) }], isError: true };

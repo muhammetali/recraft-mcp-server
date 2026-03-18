@@ -11,6 +11,7 @@ import {
   validateResponseFormat,
   resolveSize,
 } from '../validation.js';
+import type { GenerationResult } from '../types.js';
 
 export interface TextLayout {
   text: string;
@@ -35,10 +36,6 @@ export interface GenerateImageParams {
   response_format?: string;
   text_layout?: TextLayout[];
   controls?: GenerateControls;
-}
-
-interface GenerationResult {
-  data: Array<{ image_id: string; url: string }>;
 }
 
 export async function generateImage(params: GenerateImageParams): Promise<string> {
