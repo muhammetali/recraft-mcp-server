@@ -61,7 +61,7 @@ export async function generateAsset(params: GenerateAssetParams): Promise<string
       writeFileSync(tempPath, imageBuffer);
 
       const formData = new FormData();
-      const blob = new Blob([imageBuffer], { type: 'image/png' });
+      const blob = new Blob([new Uint8Array(imageBuffer)], { type: 'image/png' });
       formData.append('file', blob, 'temp.png');
       formData.append('response_format', 'url');
 

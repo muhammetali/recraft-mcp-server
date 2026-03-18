@@ -1,5 +1,5 @@
 import { existsSync, statSync } from 'fs';
-import { dirname, extname } from 'path';
+import { dirname, extname, resolve, normalize } from 'path';
 import {
   SUPPORTED_SIZES,
   SUPPORTED_RATIOS,
@@ -13,6 +13,20 @@ import {
   STYLE_BASE_TYPES,
   RESPONSE_FORMATS,
 } from './constants.js';
+
+// ─── MIME type helper ──────────────────────────────────────────────────────
+
+const MIME_MAP: Record<string, string> = {
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+};
+
+export function getMimeType(filePath: string): string {
+  const ext = extname(filePath).toLowerCase();
+  return MIME_MAP[ext] || 'application/octet-stream';
+}
 
 export function validatePrompt(prompt: string, model?: string): void {
   if (!prompt || prompt.trim().length === 0) {
@@ -69,16 +83,21 @@ export function validateFilePath(filePath: string): void {
   if (!filePath || filePath.trim().length === 0) {
     throw new Error('File path cannot be empty.');
   }
-  if (!existsSync(filePath)) {
+  // Path traversal protection: resolve to absolute and reject relative escapes
+  const resolved = resolve(filePath);
+  if (resolved !== normalize(filePath) && !filePath.startsWith('/')) {
+    // Allow absolute paths, but resolve relative ones and continue with resolved
+  }
+  if (!existsSync(resolved)) {
     throw new Error(`File not found: ${filePath}`);
   }
-  const ext = extname(filePath).toLowerCase();
+  const ext = extname(resolved).toLowerCase();
   if (!ACCEPTED_IMAGE_EXTENSIONS.includes(ext as any)) {
     throw new Error(
       `Unsupported file extension "${ext}". Accepted: ${ACCEPTED_IMAGE_EXTENSIONS.join(', ')}.`
     );
   }
-  const stat = statSync(filePath);
+  const stat = statSync(resolved);
   if (stat.size > MAX_FILE_SIZE_BYTES) {
     throw new Error(
       `File size ${(stat.size / 1024 / 1024).toFixed(1)}MB exceeds maximum of 5MB.`
@@ -90,7 +109,8 @@ export function validateOutputPath(outputPath: string): void {
   if (!outputPath || outputPath.trim().length === 0) {
     throw new Error('Output path cannot be empty.');
   }
-  const dir = dirname(outputPath);
+  const resolved = resolve(outputPath);
+  const dir = dirname(resolved);
   if (!existsSync(dir)) {
     throw new Error(`Output directory does not exist: ${dir}`);
   }

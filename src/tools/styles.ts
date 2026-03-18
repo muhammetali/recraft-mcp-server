@@ -2,7 +2,7 @@ import { readFileSync } from 'fs';
 import { basename } from 'path';
 import { recraftPostMultipart } from '../client.js';
 import { ENDPOINTS, UPLOAD_TIMEOUT_MS } from '../constants.js';
-import { validateFilePath, validateStyleBaseType } from '../validation.js';
+import { validateFilePath, validateStyleBaseType, getMimeType } from '../validation.js';
 
 interface CreateStyleResult {
   id: string;
@@ -30,7 +30,7 @@ export async function createStyle(
 
   for (const fp of filePaths) {
     const buf = readFileSync(fp);
-    const blob = new Blob([buf], { type: 'image/png' });
+    const blob = new Blob([new Uint8Array(buf)], { type: getMimeType(fp) });
     formData.append('files', blob, basename(fp));
   }
 

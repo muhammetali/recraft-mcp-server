@@ -3,7 +3,7 @@ import {
   validatePrompt, validateSize, validateModel, validateN,
   validateStyle, validateStyleBaseType, validateResponseFormat,
   validateFilePath, validateOutputPath, validateColors,
-  validateStrength, validateArtisticLevel,
+  validateStrength, validateArtisticLevel, getMimeType,
 } from '../validation.js';
 import { existsSync, statSync } from 'fs';
 
@@ -221,6 +221,32 @@ describe('validation', () => {
 
     it('rejects non-integer', () => {
       expect(() => validateArtisticLevel(2.5)).toThrow();
+    });
+  });
+
+  describe('getMimeType', () => {
+    it('returns correct MIME for png', () => {
+      expect(getMimeType('/path/to/file.png')).toBe('image/png');
+    });
+
+    it('returns correct MIME for jpg', () => {
+      expect(getMimeType('/path/to/file.jpg')).toBe('image/jpeg');
+    });
+
+    it('returns correct MIME for jpeg', () => {
+      expect(getMimeType('/path/to/file.jpeg')).toBe('image/jpeg');
+    });
+
+    it('returns correct MIME for webp', () => {
+      expect(getMimeType('/path/to/file.webp')).toBe('image/webp');
+    });
+
+    it('returns octet-stream for unknown extension', () => {
+      expect(getMimeType('/path/to/file.bmp')).toBe('application/octet-stream');
+    });
+
+    it('handles uppercase extensions', () => {
+      expect(getMimeType('/path/to/FILE.PNG')).toBe('image/png');
     });
   });
 });

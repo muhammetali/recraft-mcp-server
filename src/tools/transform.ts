@@ -11,6 +11,7 @@ import {
   validateStyle,
   validateStrength,
   validateResponseFormat,
+  getMimeType,
 } from '../validation.js';
 import type { GenerateControls, TextLayout } from './generate.js';
 
@@ -27,12 +28,12 @@ function buildMultipartForm(
   const formData = new FormData();
 
   const fileBuffer = readFileSync(filePath);
-  const blob = new Blob([fileBuffer], { type: 'image/png' });
+  const blob = new Blob([new Uint8Array(fileBuffer)], { type: getMimeType(filePath) });
   formData.append(fieldName, blob, basename(filePath));
 
   if (maskPath) {
     const maskBuffer = readFileSync(maskPath);
-    const maskBlob = new Blob([maskBuffer], { type: 'image/png' });
+    const maskBlob = new Blob([new Uint8Array(maskBuffer)], { type: getMimeType(maskPath) });
     formData.append('mask', maskBlob, basename(maskPath));
   }
 

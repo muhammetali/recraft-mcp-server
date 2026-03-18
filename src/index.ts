@@ -62,15 +62,18 @@ const responseFormatSchema = z.enum(['url', 'b64_json']).default('url')
 
 const textLayoutSchema = z.array(z.object({
   text: z.string().describe('Text to render (single word)'),
-  bbox: z.array(z.array(z.number())).describe('4-point polygon with relative coordinates [0-1]'),
+  bbox: z.array(z.array(z.number().min(0).max(1))).length(4)
+    .describe('4-point polygon with relative coordinates [0-1]'),
 })).optional().describe('Text placement on image');
 
 const controlsSchema = z.object({
-  colors: z.array(z.array(z.number())).optional()
+  colors: z.array(z.array(z.number().int().min(0).max(255))).optional()
     .describe('Preferred color palette, e.g. [[255,0,0],[0,255,0]]'),
   background_color: z.object({
-    r: z.number(), g: z.number(), b: z.number(),
-  }).optional().describe('Background color RGB'),
+    r: z.number().int().min(0).max(255),
+    g: z.number().int().min(0).max(255),
+    b: z.number().int().min(0).max(255),
+  }).optional().describe('Background color RGB (0-255)'),
   artistic_level: z.number().int().min(0).max(5).optional()
     .describe('Artistic level 0-5 (V3 only)'),
   no_text: z.boolean().optional()
