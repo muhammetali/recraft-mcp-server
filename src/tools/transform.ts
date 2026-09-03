@@ -1,7 +1,7 @@
 import { readFileSync } from 'fs';
 import { basename } from 'path';
 import { recraftPostMultipart } from '../client.js';
-import { ENDPOINTS, UPLOAD_TIMEOUT_MS } from '../constants.js';
+import { ENDPOINTS, UPLOAD_TIMEOUT_MS, MAX_DIMENSION_PX } from '../constants.js';
 import {
   validatePrompt,
   validateFilePath,
@@ -271,6 +271,92 @@ export async function generateBackground(params: GenerateBackgroundParams): Prom
   const formData = buildMultipartForm(file_path, 'image', formParams, mask_path);
   const result = await recraftPostMultipart<TransformResult>(ENDPOINTS.GENERATE_BACKGROUND, formData, UPLOAD_TIMEOUT_MS);
   return formatTransformResult(result, 'Generate Background');
+}
+
+// ─── Outpaint (V3 only) — canvas expansion, distinct from Generate Background ─
+
+export interface OutpaintParams {
+  file_path: string;
+  prompt: string;
+  size?: string;
+  expand_left?: number;
+  expand_right?: number;
+  expand_top?: number;
+  expand_bottom?: number;
+  zoom_out_percentage?: number;
+  model?: string;
+  n?: number;
+  style?: string;
+  style_id?: string;
+  negative_prompt?: string;
+  response_format?: string;
+  text_layout?: TextLayout[];
+  controls?: GenerateControls;
+}
+
+export async function outpaint(params: OutpaintParams): Promise<string> {
+  const {
+    file_path,
+    prompt,
+    size,
+    expand_left,
+    expand_right,
+    expand_top,
+    expand_bottom,
+    zoom_out_percentage,
+    model = 'recraftv3',
+    n = 1,
+    style,
+    style_id,
+    negative_prompt,
+    response_format = 'url',
+    text_layout,
+    controls,
+  } = params;
+
+  validateFilePath(file_path);
+  validatePrompt(prompt, model);
+  validateModel(model);
+  validateN(n);
+  if (response_format) validateResponseFormat(response_format);
+  if (style) validateStyle(style);
+  if (size) validateSize(size);
+
+  const expandFields = { expand_left, expand_right, expand_top, expand_bottom };
+  const hasExpand = Object.values(expandFields).some((v) => v !== undefined);
+  if (size && hasExpand) {
+    throw new Error('Cannot combine size with expand_left/expand_right/expand_top/expand_bottom. Use one or the other.');
+  }
+  if (!size && !hasExpand && zoom_out_percentage === undefined) {
+    throw new Error('At least one of size, expand_left/right/top/bottom, or zoom_out_percentage must be specified.');
+  }
+  for (const [name, value] of Object.entries(expandFields)) {
+    if (value !== undefined && (!Number.isInteger(value) || value < 0 || value > MAX_DIMENSION_PX)) {
+      throw new Error(`${name} must be an integer between 0 and ${MAX_DIMENSION_PX} (got ${value}).`);
+    }
+  }
+  if (zoom_out_percentage !== undefined && (zoom_out_percentage < 0 || zoom_out_percentage >= 100)) {
+    throw new Error(`zoom_out_percentage must be in range [0, 100) (got ${zoom_out_percentage}).`);
+  }
+
+  const formParams: Record<string, any> = {
+    prompt, model, n, response_format,
+  };
+  if (size) formParams.size = size;
+  if (expand_left !== undefined) formParams.expand_left = expand_left;
+  if (expand_right !== undefined) formParams.expand_right = expand_right;
+  if (expand_top !== undefined) formParams.expand_top = expand_top;
+  if (expand_bottom !== undefined) formParams.expand_bottom = expand_bottom;
+  if (zoom_out_percentage !== undefined) formParams.zoom_out_percentage = zoom_out_percentage;
+  if (style) formParams.style = style;
+  if (style_id) formParams.style_id = style_id;
+  if (negative_prompt) formParams.negative_prompt = negative_prompt;
+  if (text_layout) formParams.text_layout = text_layout;
+  if (controls) formParams.controls = controls;
+
+  const formData = buildMultipartForm(file_path, 'image', formParams);
+  const result = await recraftPostMultipart<TransformResult>(ENDPOINTS.OUTPAINT, formData, UPLOAD_TIMEOUT_MS);
+  return formatTransformResult(result, 'Outpaint');
 }
 
 // ─── Variate Image ─────────────────────────────────────────────────────────

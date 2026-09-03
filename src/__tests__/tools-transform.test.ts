@@ -8,7 +8,7 @@ vi.mock('fs', () => ({
 }));
 
 import { readFileSync, existsSync, statSync } from 'fs';
-import { imageToImage, inpaint, replaceBackground, generateBackground, variateImage } from '../tools/transform.js';
+import { imageToImage, inpaint, replaceBackground, generateBackground, variateImage, outpaint } from '../tools/transform.js';
 
 describe('tools/transform', () => {
   beforeEach(() => {
@@ -143,6 +143,71 @@ describe('tools/transform', () => {
         file_path: '/test/image.png',
         size: '100x100',
       })).rejects.toThrow('Unsupported size');
+    });
+  });
+
+  describe('outpaint', () => {
+    it('extends canvas with expand_* params', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce(mockTransformResponse());
+      const result = await outpaint({
+        file_path: '/test/image.png',
+        prompt: 'a mountain landscape',
+        expand_left: 200,
+        expand_right: 200,
+      });
+      expect(result).toContain('Outpaint Complete');
+    });
+
+    it('extends canvas with a target size', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce(mockTransformResponse());
+      const result = await outpaint({
+        file_path: '/test/image.png',
+        prompt: 'a mountain landscape',
+        size: '16:9',
+      });
+      expect(result).toContain('Outpaint Complete');
+    });
+
+    it('accepts zoom_out_percentage alone', async () => {
+      vi.mocked(fetch).mockResolvedValueOnce(mockTransformResponse());
+      const result = await outpaint({
+        file_path: '/test/image.png',
+        prompt: 'a mountain landscape',
+        zoom_out_percentage: 25,
+      });
+      expect(result).toContain('Outpaint Complete');
+    });
+
+    it('rejects size combined with expand_*', async () => {
+      await expect(outpaint({
+        file_path: '/test/image.png',
+        prompt: 'test',
+        size: '16:9',
+        expand_left: 100,
+      })).rejects.toThrow('Cannot combine size');
+    });
+
+    it('rejects when no expansion method is specified', async () => {
+      await expect(outpaint({
+        file_path: '/test/image.png',
+        prompt: 'test',
+      })).rejects.toThrow('At least one of size, expand_left');
+    });
+
+    it('rejects zoom_out_percentage out of range', async () => {
+      await expect(outpaint({
+        file_path: '/test/image.png',
+        prompt: 'test',
+        zoom_out_percentage: 100,
+      })).rejects.toThrow('zoom_out_percentage must be in range');
+    });
+
+    it('rejects out-of-range expand value', async () => {
+      await expect(outpaint({
+        file_path: '/test/image.png',
+        prompt: 'test',
+        expand_left: 5000,
+      })).rejects.toThrow('expand_left must be an integer');
     });
   });
 });

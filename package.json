@@ -1,9 +1,39 @@
 {
   "name": "recraft-mcp-server",
   "version": "1.0.0",
-  "description": "Recraft AI Image Generation MCP Server",
+  "description": "Recraft AI Image Generation MCP Server for AI coding agents",
   "type": "module",
   "main": "dist/index.js",
+  "bin": {
+    "recraft-mcp-server": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "!dist/__tests__",
+    "README.md",
+    "LICENSE"
+  ],
+  "mcpName": "io.github.muhammetali/recraft-mcp-server",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "recraft",
+    "image-generation",
+    "ai-image",
+    "vectorize",
+    "upscale",
+    "claude"
+  ],
+  "author": "muhammetali",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/muhammetali/recraft-mcp-server.git"
+  },
+  "homepage": "https://github.com/muhammetali/recraft-mcp-server#readme",
+  "bugs": {
+    "url": "https://github.com/muhammetali/recraft-mcp-server/issues"
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/index.ts",

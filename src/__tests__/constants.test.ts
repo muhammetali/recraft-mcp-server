@@ -13,23 +13,30 @@ describe('constants', () => {
   });
 
   it('all endpoints are defined', () => {
-    expect(Object.keys(ENDPOINTS)).toHaveLength(13);
+    expect(Object.keys(ENDPOINTS)).toHaveLength(17);
     expect(ENDPOINTS.GENERATIONS).toBe('/images/generations');
     expect(ENDPOINTS.REMOVE_BACKGROUND).toBe('/images/removeBackground');
     expect(ENDPOINTS.VECTORIZE).toBe('/images/vectorize');
     expect(ENDPOINTS.CRISP_UPSCALE).toBe('/images/crispUpscale');
     expect(ENDPOINTS.CREATIVE_UPSCALE).toBe('/images/creativeUpscale');
     expect(ENDPOINTS.ERASE_REGION).toBe('/images/eraseRegion');
+    expect(ENDPOINTS.OUTPAINT).toBe('/images/outpaint');
+    expect(ENDPOINTS.EXPLORE).toBe('/images/explore');
+    expect(ENDPOINTS.EXPLORE_SIMILAR).toBe('/images/explore/similar');
+    expect(ENDPOINTS.ENHANCE_PROMPT).toBe('/prompts/enhance');
     expect(ENDPOINTS.USERS_ME).toBe('/users/me');
   });
 
-  it('models include V4, V3, V2 variants', () => {
+  it('models include V4.1, V4 Styles, V4, V3, V2 variants', () => {
+    expect(MODELS).toContain('recraftv4_1');
+    expect(MODELS).toContain('recraftv4_1_pro');
+    expect(MODELS).toContain('recraftv4_styles');
     expect(MODELS).toContain('recraftv4');
     expect(MODELS).toContain('recraftv4_vector');
     expect(MODELS).toContain('recraftv4_pro');
     expect(MODELS).toContain('recraftv3');
     expect(MODELS).toContain('recraftv2');
-    expect(MODELS.length).toBeGreaterThanOrEqual(8);
+    expect(MODELS.length).toBeGreaterThanOrEqual(20);
   });
 
   it('supported sizes are valid pixel dimensions', () => {

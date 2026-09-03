@@ -14,6 +14,10 @@ export const ENDPOINTS = {
   CRISP_UPSCALE: '/images/crispUpscale',
   CREATIVE_UPSCALE: '/images/creativeUpscale',
   ERASE_REGION: '/images/eraseRegion',
+  OUTPAINT: '/images/outpaint',
+  EXPLORE: '/images/explore',
+  EXPLORE_SIMILAR: '/images/explore/similar',
+  ENHANCE_PROMPT: '/prompts/enhance',
   STYLES: '/styles',
   USERS_ME: '/users/me',
 } as const;
@@ -27,10 +31,22 @@ export const BATCH_DELAY_MS = 300;
 
 // Models
 export const MODELS = [
+  'recraftv4_1',
+  'recraftv4_1_vector',
+  'recraftv4_1_pro',
+  'recraftv4_1_pro_vector',
+  'recraftv4_1_utility',
+  'recraftv4_1_utility_vector',
+  'recraftv4_1_utility_pro',
+  'recraftv4_1_utility_pro_vector',
   'recraftv4',
   'recraftv4_vector',
   'recraftv4_pro',
   'recraftv4_pro_vector',
+  'recraftv4_styles',
+  'recraftv4_styles_vector',
+  'recraftv4_styles_pro',
+  'recraftv4_styles_pro_vector',
   'recraftv3',
   'recraftv3_vector',
   'recraftv2',

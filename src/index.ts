@@ -15,7 +15,7 @@ import { checkCredits } from './tools/user.js';
 import { generateImage, batchGenerate } from './tools/generate.js';
 import {
   imageToImage, inpaint, replaceBackground,
-  generateBackground, variateImage,
+  generateBackground, variateImage, outpaint,
 } from './tools/transform.js';
 import {
   removeBackground, vectorize, crispUpscale,
@@ -25,6 +25,7 @@ import { createStyle } from './tools/styles.js';
 import { downloadImage } from './tools/download.js';
 import { generateAsset, batchGenerateAssets, generateThemedSet } from './tools/pipeline.js';
 import { generateSized, compareStyles, textureSwap } from './tools/advanced.js';
+import { explore, exploreSimilar, enhancePrompt } from './tools/explore.js';
 
 import { RecraftClientError } from './client.js';
 import { MODELS, SUPPORTED_SIZES, SUPPORTED_RATIOS, ALL_STYLES, STYLE_BASE_TYPES } from './constants.js';
@@ -32,7 +33,7 @@ import { MODELS, SUPPORTED_SIZES, SUPPORTED_RATIOS, ALL_STYLES, STYLE_BASE_TYPES
 const server = new McpServer({
   name: 'recraft-mcp-server',
   version: '1.0.0',
-  description: 'Recraft AI Image Generation MCP Server — Generate, transform, vectorize, upscale images with 20 tools.',
+  description: 'Recraft AI Image Generation MCP Server — Generate, transform, vectorize, upscale images with 24 tools.',
 });
 
 // ─── Error handling ─────────────────────────────────────────────────────────
@@ -227,7 +228,7 @@ server.tool(
 
 server.tool(
   'recraft_generate_background',
-  'Fill/expand the background of an image using a mask (outpainting). White mask = fill area, black = preserve. V3/V3 Vector only.',
+  'Fill masked background areas within an image\'s existing canvas (same size in, same size out). White mask = fill area, black = preserve. For expanding the canvas beyond the original image bounds, use recraft_outpaint instead. V3/V3 Vector only.',
   {
     file_path: z.string().describe('Local path to source image'),
     mask_path: z.string().describe('Local path to mask (white=fill, black=preserve)'),
@@ -599,6 +600,110 @@ server.tool(
   async (params) => {
     try {
       const result = await textureSwap(params);
+      return { content: [{ type: 'text', text: result }] };
+    } catch (e) {
+      return { content: [{ type: 'text', text: handleError(e) }], isError: true };
+    }
+  },
+);
+
+// =============================================================================
+// 21. OUTPAINT (V3 only)
+// =============================================================================
+
+server.tool(
+  'recraft_outpaint',
+  'Extend an image beyond its original boundaries with AI-generated content (canvas expansion). Different from recraft_generate_background, which only fills masked areas within the existing canvas. Specify a target size, per-side expand amounts, and/or a zoom-out percentage. V3/V3 Vector only.',
+  {
+    file_path: z.string().describe('Local path to source image'),
+    prompt: z.string().describe('Description of the content to generate in the extended area'),
+    size: z.string().optional()
+      .describe('Target size for the resulting image — the source image is placed inside it. Cannot combine with expand_*.'),
+    expand_left: z.number().int().min(0).max(4096).optional().describe('Pixels to add to the left. Cannot combine with size.'),
+    expand_right: z.number().int().min(0).max(4096).optional().describe('Pixels to add to the right. Cannot combine with size.'),
+    expand_top: z.number().int().min(0).max(4096).optional().describe('Pixels to add to the top. Cannot combine with size.'),
+    expand_bottom: z.number().int().min(0).max(4096).optional().describe('Pixels to add to the bottom. Cannot combine with size.'),
+    zoom_out_percentage: z.number().min(0).max(100).optional()
+      .describe('Scales the source image down by this percentage before outpainting, revealing more surrounding context [0-100). Can combine with size or expand_*.'),
+    model: z.string().default('recraftv3').describe('Model (V3 only): recraftv3, recraftv3_vector'),
+    n: nSchema,
+    style: z.string().optional().describe('Style name'),
+    style_id: z.string().optional().describe('Custom style UUID'),
+    negative_prompt: z.string().optional().describe('What to exclude'),
+    response_format: responseFormatSchema,
+    text_layout: textLayoutSchema,
+    controls: controlsSchema,
+  },
+  async (params) => {
+    try {
+      const result = await outpaint(params);
+      return { content: [{ type: 'text', text: result }] };
+    } catch (e) {
+      return { content: [{ type: 'text', text: handleError(e) }], isError: true };
+    }
+  },
+);
+
+// =============================================================================
+// 22. EXPLORE
+// =============================================================================
+
+server.tool(
+  'recraft_explore',
+  'Generate a set of images for visual exploration and discovery — diverse results from a prompt, no fine-grained style/color control. Returns image IDs usable with recraft_explore_similar.',
+  {
+    prompt: z.string().describe('Image description'),
+    model: z.string().default('recraftv4_1')
+      .describe('Model: recraftv4_1, recraftv4_1_vector, recraftv4_1_pro, recraftv4_1_pro_vector, recraftv4, recraftv4_vector, recraftv4_pro, recraftv4_pro_vector'),
+    size: z.string().default('1:1').describe('Image size or ratio'),
+    response_format: responseFormatSchema,
+    controls: controlsSchema,
+  },
+  async (params) => {
+    try {
+      const result = await explore(params);
+      return { content: [{ type: 'text', text: result }] };
+    } catch (e) {
+      return { content: [{ type: 'text', text: handleError(e) }], isError: true };
+    }
+  },
+);
+
+// =============================================================================
+// 23. EXPLORE SIMILAR
+// =============================================================================
+
+server.tool(
+  'recraft_explore_similar',
+  'Generate images visually similar to a source image previously created with recraft_explore. similarity controls how closely results resemble the source (1=slightly, 5=extremely similar).',
+  {
+    source_image_id: z.string().describe('Image ID from a previous recraft_explore result'),
+    similarity: z.number().int().min(1).max(5).describe('How closely to match the source image (1-5)'),
+    response_format: responseFormatSchema,
+  },
+  async (params) => {
+    try {
+      const result = await exploreSimilar(params);
+      return { content: [{ type: 'text', text: result }] };
+    } catch (e) {
+      return { content: [{ type: 'text', text: handleError(e) }], isError: true };
+    }
+  },
+);
+
+// =============================================================================
+// 24. ENHANCE PROMPT
+// =============================================================================
+
+server.tool(
+  'recraft_enhance_prompt',
+  'Expand a short prompt into a richer, more detailed description with added visual context, style cues, and composition details. Use the result with any generation tool for more vivid output.',
+  {
+    prompt: z.string().describe('The original prompt to enhance (max 2000 chars)'),
+  },
+  async ({ prompt }) => {
+    try {
+      const result = await enhancePrompt(prompt);
       return { content: [{ type: 'text', text: result }] };
     } catch (e) {
       return { content: [{ type: 'text', text: handleError(e) }], isError: true };
