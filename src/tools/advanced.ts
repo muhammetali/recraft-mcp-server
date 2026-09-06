@@ -1,6 +1,6 @@
 import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'fs';
 import { dirname, join } from 'path';
-import sharp from 'sharp';
+import sharp, { type OverlayOptions } from 'sharp';
 import { recraftPost, recraftPostMultipart, downloadToBuffer } from '../client.js';
 import { ENDPOINTS, BATCH_DELAY_MS, SUPPORTED_SIZES } from '../constants.js';
 import {
@@ -263,7 +263,7 @@ async function buildComparisonGrid(
   const gridH = rows * (cellH + labelHeight + padding) - padding;
 
   // Create base canvas
-  const composites: sharp.OverlayOptions[] = [];
+  const composites: OverlayOptions[] = [];
 
   for (let i = 0; i < images.length; i++) {
     const col = i % cols;

@@ -8,7 +8,7 @@ import { fileURLToPath } from 'url';
 
 // Load .env from the package directory
 const __dirname = dirname(fileURLToPath(import.meta.url));
-config({ path: resolve(__dirname, '..', '.env') });
+config({ path: resolve(__dirname, '..', '.env'), quiet: true });
 
 // Tool implementations
 import { checkCredits } from './tools/user.js';
@@ -32,7 +32,7 @@ import { MODELS, SUPPORTED_SIZES, SUPPORTED_RATIOS, ALL_STYLES, STYLE_BASE_TYPES
 
 const server = new McpServer({
   name: 'recraft-mcp-server',
-  version: '1.0.0',
+  version: '1.1.0',
   description: 'Recraft AI Image Generation MCP Server — Generate, transform, vectorize, upscale images with 24 tools.',
 });
 

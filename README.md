@@ -71,6 +71,9 @@ This MCP server exposes 24 tools to your AI agent — full coverage of the Recra
 
 ## ⚙️ Quick Start
 
+Requires Node.js 20.9.0 or newer. Version 1.1.0 upgrades the native image-processing
+dependencies to address known libvips vulnerabilities; Node.js 18 is no longer supported.
+
 ### 1. Get a Recraft API key
 Sign up at [recraft.ai](https://www.recraft.ai/) and grab an API key from your account settings.
 
@@ -137,6 +140,7 @@ cd recraft-mcp-server
 npm install
 npm run build
 npm test
+npm run audit:security
 ```
 
 ## 📄 License
