@@ -1,5 +1,37 @@
 # Dependency security review — 2026-09-06
 
+## 1.2.0 follow-up: update and alternative assessment
+
+The stable `@modelcontextprotocol/sdk@1.30.0` was already the newest v1 package,
+but the official replacement `@modelcontextprotocol/server@2.0.0` is available as
+a stable release. Its only direct dependencies are `@modelcontextprotocol/core`
+and Zod. We migrated all 24 tools using the official codemod and explicit schema
+objects, preserving the stdio interface. No custom SDK fork, source pruning,
+scanner suppression, or application bundling was used.
+
+| Decision | Rationale and result |
+| --- | --- |
+| SDK v1 → official v2 server | Replaces the monolithic SDK with its maintained successor. The production lock graph drops from 100 dependency entries in 1.1.0 to 36, counting all optional platforms. Express/Hono, cross-spawn, Ajv, old polyfills, and the flagged elicitation example no longer belong to our dependency tree. |
+| Socket's eight override suggestions | Their parent SDK dependencies are replaced by the official v2 architecture. No need to add eight third-party forks or rely on root-only npm overrides that consumers may not inherit. |
+| dotenv 16.6.1 → 17.4.2 | Use the current stable release; retain quiet startup and existing `.env` behavior. |
+| Retain sharp 0.35.4 | It is the current stable release and supplies the tested resize, SVG label rendering, compositing, and native cross-platform behavior. Its required platform detection and optional WASM paths still warrant review. Replacing it just to alter scanner colors would require a separately tested image-processing migration. |
+| Zod interpreter mode | Use the supported `jitless` setting before SDK initialization; verify real protocol operations with Node's string-code-generation prohibition enabled. This does not remove dormant code-generation source from third-party packages. |
+
+The public Socket record for the v2 server/core packages was inspected before
+migration: no AI security finding, eval, or shell capability was reported for them.
+The server still reports network capability. Recheck the published 1.2.0 report
+after indexing; capability findings on sharp, detect-libc, and optional WASM
+dependencies are not claimed to be eliminated.
+
+The causes of the earlier release's problems were a vulnerable sharp version
+range, a stale dependency lockfile, and using the old aggregate SDK without
+evaluating its modular successor. Prevention is now recorded in `SECURITY.md`,
+`CLAUDE.md`, and `security-policy.json`, with `npm run verify` enforced by the
+publication lifecycle and CI. All dependency changes still require review;
+the automated controls do not claim to detect every possible future Socket alert.
+
+## Historical 1.0.0 / 1.1.0 assessment
+
 Scope: `recraft-mcp-server@1.0.0`, the local dependency lockfile, and the 1.1.0 update.
 The Socket package report resolves published dependency ranges; its dependency versions
 can differ from those in the repository lockfile. Both were inspected.

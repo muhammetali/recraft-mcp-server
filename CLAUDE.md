@@ -9,11 +9,22 @@ npm run build          # TypeScript → dist/ (tsc)
 npm run dev            # Run with tsx (hot reload)
 npm start              # Production: node dist/index.js
 npm test               # Run all tests (vitest)
+npm run verify         # Required release gate: build, tests, protocol, policy, audit
 npm run test:watch     # Watch mode
 npx vitest run src/__tests__/tools-advanced.test.ts  # Single test file
 ```
 
 ## Architecture
+
+Read `SECURITY.md`, `SECURITY-REVIEW.md`, and `security-policy.json` before dependency
+or release changes. Use the official `@modelcontextprotocol/server` v2 package and
+`registerTool` with explicit schema objects. Do not reintroduce the monolithic v1
+SDK, HTTP frameworks, Ajv, shell utilities, or install scripts without a documented
+need and security review. Prefer updates and supported alternatives before bundling
+or dependency forks. Keep `runtime-security.ts` imported before SDK initialization.
+Never claim zero Socket warnings from an npm audit result. Do not silence or hide
+alerts to pass review. The policy file is a review boundary, not an auto-update file.
+All 24 tool contracts and both tested stdio protocol versions must keep working.
 
 This is an MCP (Model Context Protocol) server exposing 24 tools for AI image generation via the Recraft API. It communicates over stdio.
 

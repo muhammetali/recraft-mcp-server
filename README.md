@@ -141,7 +141,13 @@ npm install
 npm run build
 npm test
 npm run audit:security
+npm run verify
 ```
+
+Version 1.2.0 uses the official modular MCP SDK v2 while preserving all 24 tools.
+See [security policy](https://github.com/muhammetali/recraft-mcp-server/blob/main/SECURITY.md)
+and [dependency review](https://github.com/muhammetali/recraft-mcp-server/blob/main/SECURITY-REVIEW.md)
+for release checks, dependency decisions, and necessary runtime capabilities.
 
 ## 📄 License
 MIT — see [LICENSE](LICENSE).

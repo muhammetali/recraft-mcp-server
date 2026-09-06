@@ -1,0 +1,53 @@
+{
+  "reviewedDirectDependencies": {
+    "@modelcontextprotocol/server": "2.0.0",
+    "dotenv": "17.4.2",
+    "sharp": "0.35.4",
+    "zod": "4.5.4"
+  },
+  "allowedProductionPackages": [
+    "@modelcontextprotocol/server",
+    "@modelcontextprotocol/core",
+    "zod",
+    "dotenv",
+    "sharp",
+    "detect-libc",
+    "semver",
+    "@img/colour",
+    "@emnapi/runtime",
+    "tslib",
+    "@img/sharp-darwin-arm64",
+    "@img/sharp-darwin-x64",
+    "@img/sharp-freebsd-wasm32",
+    "@img/sharp-linux-arm",
+    "@img/sharp-linux-arm64",
+    "@img/sharp-linux-ppc64",
+    "@img/sharp-linux-riscv64",
+    "@img/sharp-linux-s390x",
+    "@img/sharp-linux-x64",
+    "@img/sharp-linuxmusl-arm64",
+    "@img/sharp-linuxmusl-x64",
+    "@img/sharp-wasm32",
+    "@img/sharp-webcontainers-wasm32",
+    "@img/sharp-win32-arm64",
+    "@img/sharp-win32-ia32",
+    "@img/sharp-win32-x64",
+    "@img/sharp-libvips-darwin-arm64",
+    "@img/sharp-libvips-darwin-x64",
+    "@img/sharp-libvips-linux-arm",
+    "@img/sharp-libvips-linux-arm64",
+    "@img/sharp-libvips-linux-ppc64",
+    "@img/sharp-libvips-linux-riscv64",
+    "@img/sharp-libvips-linux-s390x",
+    "@img/sharp-libvips-linux-x64",
+    "@img/sharp-libvips-linuxmusl-arm64",
+    "@img/sharp-libvips-linuxmusl-x64"
+  ],
+  "requiredReleaseFiles": [
+    "dist/index.js",
+    "dist/runtime-security.js",
+    "README.md",
+    "LICENSE",
+    "SECURITY.md"
+  ]
+}

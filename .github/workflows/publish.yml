@@ -23,7 +23,5 @@ jobs:
           package-manager-cache: false
 
       - run: npm ci
-      - run: npm run audit:security
-      - run: npm run build --if-present
-      - run: npm test
+      # prepublishOnly runs the full verification suite, including the audit.
       - run: npm publish

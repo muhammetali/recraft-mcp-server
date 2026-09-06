@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.2.0 — 2026-09-06
+
+- Upgrade to the official modular MCP SDK v2, preserving all 24 stdio tools and
+  removing the old SDK's HTTP, shell-helper, Ajv, and example-server dependencies.
+- Upgrade dotenv to 17.4.2 and pin reviewed direct dependency versions.
+- Disable Zod runtime code generation with its supported interpreter mode.
+- Add stdio compatibility tests with string code generation disabled.
+- Require dependency-policy, package-content, protocol, native-image, and npm
+  advisory checks before every publication.
+- Add security decisions, regression rules, scheduled CI checks, Dependabot, and
+  a development roadmap. Necessary network/filesystem/native dependency alerts
+  remain subject to documented review.
+
 ## 1.1.0 — 2026-09-06
 
 - Upgrade sharp from 0.34.5 to 0.35.4 to address the libvips vulnerabilities

@@ -1,6 +1,6 @@
 {
   "name": "recraft-mcp-server",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Recraft AI Image Generation MCP Server for AI coding agents",
   "type": "module",
   "engines": {
@@ -14,7 +14,9 @@
     "dist",
     "!dist/__tests__",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "SECURITY.md",
+    "CHANGELOG.md"
   ],
   "mcpName": "io.github.muhammetali/recraft-mcp-server",
   "keywords": [
@@ -43,14 +45,18 @@
     "start": "node dist/index.js",
     "clean": "rm -rf dist",
     "test": "vitest run",
+    "test:protocol": "node --test scripts/protocol.test.mjs",
+    "check:security": "node scripts/check-security.mjs",
+    "verify": "npm run build && npm test && npm run test:protocol && npm run check:security && npm run audit:security",
+    "prepublishOnly": "npm run verify",
     "audit:security": "npm audit --audit-level=low",
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.30.0",
-    "dotenv": "^16.6.1",
-    "sharp": "^0.35.4",
-    "zod": "^4.5.4"
+    "dotenv": "17.4.2",
+    "sharp": "0.35.4",
+    "zod": "4.5.4",
+    "@modelcontextprotocol/server": "2.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.13.10",
