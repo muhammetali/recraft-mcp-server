@@ -5,12 +5,13 @@ import {
   validateSize,
   validateModel,
   validateN,
-  validateStyle,
+  resolveStyle,
   validateColors,
   validateArtisticLevel,
   validateResponseFormat,
   resolveSize,
 } from '../validation.js';
+import { formatUsage } from '../format.js';
 import type { GenerationResult } from '../types.js';
 
 export interface TextLayout {
@@ -30,7 +31,11 @@ export interface GenerateImageParams {
   model?: string;
   size?: string;
   n?: number;
+  /// One of the six broad families. A substyle name passed here is routed
+  /// to `substyle` rather than dropped — see `resolveStyle`.
   style?: string;
+  /// The specific look within a family. Recraft validates this strictly.
+  substyle?: string;
   style_id?: string;
   negative_prompt?: string;
   response_format?: string;
@@ -45,6 +50,7 @@ export async function generateImage(params: GenerateImageParams): Promise<string
     size = '1024x1024',
     n = 1,
     style,
+    substyle,
     style_id,
     negative_prompt,
     response_format = 'url',
@@ -57,7 +63,7 @@ export async function generateImage(params: GenerateImageParams): Promise<string
   validateSize(size);
   validateN(n);
   if (response_format) validateResponseFormat(response_format);
-  if (style) validateStyle(style);
+  const resolvedStyle = resolveStyle(style, substyle);
   if (controls?.colors) validateColors(controls.colors);
   if (controls?.artistic_level !== undefined) validateArtisticLevel(controls.artistic_level);
 
@@ -75,7 +81,8 @@ export async function generateImage(params: GenerateImageParams): Promise<string
     response_format,
   };
 
-  if (style) body.style = style;
+  if (resolvedStyle.style) body.style = resolvedStyle.style;
+  if (resolvedStyle.substyle) body.substyle = resolvedStyle.substyle;
   if (style_id) body.style_id = style_id;
   if (negative_prompt) body.negative_prompt = negative_prompt;
   if (text_layout) body.text_layout = text_layout;
@@ -89,7 +96,7 @@ export async function generateImage(params: GenerateImageParams): Promise<string
     lines.push(`${i + 1}. **ID:** ${img.image_id}`);
     lines.push(`   **URL:** ${img.url}\n`);
   }
-  lines.push(`Model: ${model} | Size: ${size}`);
+  lines.push(formatUsage(model, size, resolvedStyle, result.credits));
 
   return lines.join('\n');
 }
@@ -101,6 +108,7 @@ export interface BatchAsset {
   size?: string;
   model?: string;
   style?: string;
+  substyle?: string;
   remove_bg?: boolean;
 }
 
@@ -124,7 +132,9 @@ export async function batchGenerate(assets: BatchAsset[]): Promise<string> {
         n: 1,
         response_format: 'url',
       };
-      if (asset.style) body.style = asset.style;
+      const assetStyle = resolveStyle(asset.style, asset.substyle);
+      if (assetStyle.style) body.style = assetStyle.style;
+      if (assetStyle.substyle) body.substyle = assetStyle.substyle;
 
       const result = await recraftPost<GenerationResult>(ENDPOINTS.GENERATIONS, body);
       results.push({

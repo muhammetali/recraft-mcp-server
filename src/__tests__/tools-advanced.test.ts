@@ -240,7 +240,11 @@ describe('tools/advanced', () => {
 
       const [, options] = vi.mocked(fetch).mock.calls[0];
       const body = JSON.parse((options as any).body);
-      expect(body.style).toBe('pixel_art');
+      // `pixel_art` is a substyle, not a style family. Sent in the `style`
+      // field — which is what this test used to assert — Recraft ignores it
+      // and the caller silently does not get pixel art.
+      expect(body.substyle).toBe('pixel_art');
+      expect(body.style).toBeUndefined();
     });
 
     it('passes style_id correctly', async () => {

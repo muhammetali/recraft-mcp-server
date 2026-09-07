@@ -1,17 +1,19 @@
 import { existsSync, statSync } from 'fs';
 import { dirname, extname, resolve, normalize } from 'path';
 import {
-  SUPPORTED_SIZES,
-  SUPPORTED_RATIOS,
-  MODELS,
   ACCEPTED_IMAGE_EXTENSIONS,
-  MAX_FILE_SIZE_BYTES,
-  MAX_PROMPT_LENGTH_V4,
-  MAX_PROMPT_LENGTH_V3,
-  MAX_IMAGES_PER_REQUEST,
   ALL_STYLES,
-  STYLE_BASE_TYPES,
+  IMAGE_SUBSTYLES,
+  LEGACY_STYLE_ALIASES,
+  MAX_FILE_SIZE_BYTES,
+  MAX_IMAGES_PER_REQUEST,
+  MAX_PROMPT_LENGTH_V3,
+  MAX_PROMPT_LENGTH_V4,
+  MODELS,
   RESPONSE_FORMATS,
+  STYLE_BASE_TYPES,
+  SUPPORTED_RATIOS,
+  SUPPORTED_SIZES,
 } from './constants.js';
 
 // ─── MIME type helper ──────────────────────────────────────────────────────
@@ -92,6 +94,59 @@ export function validateStyle(style: string): void {
   }
 }
 
+export function validateSubstyle(substyle: string): void {
+  if (!IMAGE_SUBSTYLES.includes(substyle as any)) {
+    // The full list goes in the error rather than in every tool's schema
+    // description: it is ~1.5KB, which is cheap once on failure and
+    // expensive on all 14 tools in every request.
+    throw new Error(
+      `Unsupported substyle "${substyle}". Recraft validates this field ` +
+        `strictly. Accepted values: ${IMAGE_SUBSTYLES.join(', ')}.`
+    );
+  }
+}
+
+/// Splits whatever the caller passed as a "style" into the two fields
+/// Recraft actually has.
+///
+/// Callers — and the models driving them — reasonably say "pixel_art" when
+/// they mean a substyle, because that is how Recraft's own UI and marketing
+/// name things. The API disagrees: `style` accepts six families and
+/// `substyle` is a strict enum. Sending a substyle in the `style` field is
+/// not an error, it just silently does nothing, which is the worst kind of
+/// wrong. So the split happens here, once, instead of at fourteen call
+/// sites.
+export function resolveStyle(
+  style?: string,
+  substyle?: string
+): { style?: string; substyle?: string } {
+  const out: { style?: string; substyle?: string } = {};
+
+  if (substyle) {
+    validateSubstyle(substyle);
+    out.substyle = substyle;
+  }
+
+  if (style) {
+    const alias = LEGACY_STYLE_ALIASES[style];
+    if (alias) {
+      // A name from the old flattened list. Map it onto the real pair,
+      // without overwriting a substyle the caller asked for explicitly.
+      if (alias.style) out.style = alias.style;
+      if (alias.substyle && !out.substyle) out.substyle = alias.substyle;
+    } else if (IMAGE_SUBSTYLES.includes(style as any)) {
+      // A substyle in the style field. Honour the intent rather than
+      // dropping it on the floor.
+      if (!out.substyle) out.substyle = style;
+    } else {
+      validateStyle(style);
+      out.style = style;
+    }
+  }
+
+  return out;
+}
+
 export function validateStyleBaseType(baseType: string): void {
   if (!STYLE_BASE_TYPES.includes(baseType as any)) {
     throw new Error(`Unsupported style base type "${baseType}". Supported: ${STYLE_BASE_TYPES.join(', ')}.`);
@@ -163,5 +218,17 @@ export function validateStrength(strength: number): void {
 export function validateArtisticLevel(level: number): void {
   if (!Number.isInteger(level) || level < 0 || level > 5) {
     throw new Error(`Artistic level must be an integer between 0 and 5 (got ${level}).`);
+  }
+}
+
+/// Style ids are UUIDs. Checking the shape here turns a 404 round trip into
+/// an immediate, specific error — and stops a malformed id being pasted
+/// into a URL path.
+export function validateStyleId(styleId: string): void {
+  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!styleId || !UUID.test(styleId)) {
+    throw new Error(
+      `Invalid style_id "${styleId}". Expected a UUID as returned by recraft_create_style.`
+    );
   }
 }

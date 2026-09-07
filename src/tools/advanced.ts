@@ -4,8 +4,14 @@ import sharp, { type OverlayOptions } from 'sharp';
 import { recraftPost, recraftPostMultipart, downloadToBuffer } from '../client.js';
 import { ENDPOINTS, BATCH_DELAY_MS, SUPPORTED_SIZES } from '../constants.js';
 import {
-  validatePrompt, validateSize, validateModel, validateStyle,
-  validateFilePath, validateOutputPath, resolveSize,
+  resolveSize,
+  resolveStyle,
+  validateFilePath,
+  validateModel,
+  validateOutputPath,
+  validatePrompt,
+  validateSize,
+  validateStyle,
 } from '../validation.js';
 
 import type { GenerationResult, BgRemoveResult } from '../types.js';
@@ -59,6 +65,7 @@ export interface GenerateSizedParams {
   fit?: ResizeFit;
   model?: string;
   style?: string;
+  substyle?: string;
   style_id?: string;
   negative_prompt?: string;
   remove_bg?: boolean;
@@ -73,6 +80,7 @@ export async function generateSized(params: GenerateSizedParams): Promise<string
     fit = 'contain',
     model = 'recraftv4',
     style,
+    substyle,
     style_id,
     negative_prompt,
     remove_bg = false,
@@ -98,7 +106,9 @@ export async function generateSized(params: GenerateSizedParams): Promise<string
   const body: Record<string, any> = {
     prompt, model, size: resolvedSize, n: 1, response_format: 'url',
   };
-  if (style) body.style = style;
+  const resolvedStyle = resolveStyle(style, substyle);
+  if (resolvedStyle.style) body.style = resolvedStyle.style;
+  if (resolvedStyle.substyle) body.substyle = resolvedStyle.substyle;
   if (style_id) body.style_id = style_id;
   if (negative_prompt) body.negative_prompt = negative_prompt;
 
@@ -313,6 +323,7 @@ export interface TextureSwapParams {
   output_path: string;
   model?: string;
   style?: string;
+  substyle?: string;
   style_id?: string;
   negative_prompt?: string;
   feather?: number;
@@ -326,6 +337,7 @@ export async function textureSwap(params: TextureSwapParams): Promise<string> {
     output_path,
     model = 'recraftv4',
     style,
+    substyle,
     style_id,
     negative_prompt,
     feather = 0,
@@ -368,7 +380,9 @@ export async function textureSwap(params: TextureSwapParams): Promise<string> {
   const body: Record<string, any> = {
     prompt, model, size: resolvedSize, n: 1, response_format: 'url',
   };
-  if (style) body.style = style;
+  const resolvedStyle = resolveStyle(style, substyle);
+  if (resolvedStyle.style) body.style = resolvedStyle.style;
+  if (resolvedStyle.substyle) body.substyle = resolvedStyle.substyle;
   if (style_id) body.style_id = style_id;
   if (negative_prompt) body.negative_prompt = negative_prompt;
 

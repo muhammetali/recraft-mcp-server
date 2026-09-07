@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   API_BASE_URL, ENDPOINTS, MODELS, SUPPORTED_SIZES, SUPPORTED_RATIOS,
-  ALL_STYLES, V3_RASTER_STYLES, V3_VECTOR_STYLES, V2_ICON_STYLES,
+  ALL_STYLES, IMAGE_STYLES, IMAGE_SUBSTYLES, LEGACY_STYLE_ALIASES,
   STYLE_BASE_TYPES, ACCEPTED_IMAGE_EXTENSIONS, RESPONSE_FORMATS,
   DEFAULT_TIMEOUT_MS, UPLOAD_TIMEOUT_MS, MAX_FILE_SIZE_BYTES,
   MAX_PROMPT_LENGTH_V4, MAX_PROMPT_LENGTH_V3, MAX_IMAGES_PER_REQUEST,
@@ -12,19 +12,43 @@ describe('constants', () => {
     expect(API_BASE_URL).toBe('https://external.api.recraft.ai/v1');
   });
 
-  it('all endpoints are defined', () => {
-    expect(Object.keys(ENDPOINTS)).toHaveLength(17);
-    expect(ENDPOINTS.GENERATIONS).toBe('/images/generations');
-    expect(ENDPOINTS.REMOVE_BACKGROUND).toBe('/images/removeBackground');
-    expect(ENDPOINTS.VECTORIZE).toBe('/images/vectorize');
-    expect(ENDPOINTS.CRISP_UPSCALE).toBe('/images/crispUpscale');
-    expect(ENDPOINTS.CREATIVE_UPSCALE).toBe('/images/creativeUpscale');
-    expect(ENDPOINTS.ERASE_REGION).toBe('/images/eraseRegion');
-    expect(ENDPOINTS.OUTPAINT).toBe('/images/outpaint');
-    expect(ENDPOINTS.EXPLORE).toBe('/images/explore');
-    expect(ENDPOINTS.EXPLORE_SIMILAR).toBe('/images/explore/similar');
-    expect(ENDPOINTS.ENHANCE_PROMPT).toBe('/prompts/enhance');
-    expect(ENDPOINTS.USERS_ME).toBe('/users/me');
+  it('every endpoint is a path Recraft actually serves', () => {
+    // This replaced a test that asserted `Object.keys(ENDPOINTS).length` and
+    // then restated each literal — it went red whenever an endpoint was
+    // added, which is noise, and could never catch the failure that
+    // matters: a path the API does not have. This list is the operation set
+    // from Recraft's OpenAPI document (paths minus the `/v1` prefix the
+    // base URL already carries).
+    const SERVED = new Set([
+      '/colors/optimize',
+      '/images/clarityUpscale',
+      '/images/creativeUpscale',
+      '/images/crispUpscale',
+      '/images/eraseRegion',
+      '/images/explore',
+      '/images/explore/similar',
+      '/images/generateBackground',
+      '/images/generations',
+      '/images/generations/raster',
+      '/images/generations/vector',
+      '/images/generativeUpscale',
+      '/images/imageToImage',
+      '/images/inpaint',
+      '/images/outpaint',
+      '/images/removeBackground',
+      '/images/replaceBackground',
+      '/images/variateImage',
+      '/images/vectorize',
+      '/models',
+      '/prompts/enhance',
+      '/styles',
+      '/styles/basic',
+      '/users/me',
+    ]);
+
+    for (const [name, path] of Object.entries(ENDPOINTS)) {
+      expect(SERVED, `${name} -> ${path}`).toContain(path);
+    }
   });
 
   it('models include V4.1, V4 Styles, V4, V3, V2 variants', () => {
@@ -55,13 +79,27 @@ describe('constants', () => {
     expect(SUPPORTED_RATIOS).toContain('16:9');
   });
 
-  it('ALL_STYLES combines V3 raster, V3 vector, V2 icon styles', () => {
+  it('ALL_STYLES accepts both levels plus the names it used to accept', () => {
+    // ALL_STYLES exists only so `validateStyle` keeps accepting everything
+    // it accepted before the taxonomy was corrected. Its job is backwards
+    // compatibility, not description — the two real vocabularies are
+    // IMAGE_STYLES and IMAGE_SUBSTYLES.
     expect(ALL_STYLES.length).toBe(
-      V3_RASTER_STYLES.length + V3_VECTOR_STYLES.length + V2_ICON_STYLES.length
+      IMAGE_STYLES.length + IMAGE_SUBSTYLES.length + Object.keys(LEGACY_STYLE_ALIASES).length
     );
-    expect(ALL_STYLES).toContain('photorealism');
-    expect(ALL_STYLES).toContain('vector_art');
-    expect(ALL_STYLES).toContain('icon');
+    expect(ALL_STYLES).toContain('photorealism'); // legacy
+    expect(ALL_STYLES).toContain('realistic_image'); // family
+    expect(ALL_STYLES).toContain('pixel_art'); // substyle
+  });
+
+  it('every legacy alias maps onto values the API defines', () => {
+    // The aliases are the bridge between the old invented vocabulary and
+    // the real one. An alias pointing at another invented name would just
+    // move the bug.
+    for (const mapped of Object.values(LEGACY_STYLE_ALIASES)) {
+      if (mapped.style) expect(IMAGE_STYLES).toContain(mapped.style);
+      if (mapped.substyle) expect(IMAGE_SUBSTYLES).toContain(mapped.substyle);
+    }
   });
 
   it('style base types are valid', () => {

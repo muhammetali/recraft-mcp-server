@@ -115,6 +115,14 @@ export async function recraftGet<T = any>(path: string): Promise<T> {
   return handleResponse<T>(response);
 }
 
+export async function recraftDelete<T = any>(path: string): Promise<T> {
+  const response = await fetchWithRetry(`${API_BASE_URL}${path}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  }, DEFAULT_TIMEOUT_MS);
+  return handleResponse<T>(response);
+}
+
 // Multipart POST (for file uploads)
 export async function recraftPostMultipart<T = any>(
   path: string,

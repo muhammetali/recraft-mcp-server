@@ -11,6 +11,8 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 config({ path: resolve(__dirname, '..', '.env'), quiet: true });
 
+import { previewFromUrls } from './preview.js';
+
 // Tool implementations
 import { checkCredits } from './tools/user.js';
 import { generateImage, batchGenerate } from './tools/generate.js';
@@ -29,7 +31,13 @@ import {
   creativeUpscale,
   eraseRegion,
 } from './tools/enhance.js';
-import { createStyle } from './tools/styles.js';
+import {
+  createStyle,
+  listStyles,
+  getStyle,
+  deleteStyle,
+  listBasicStyles,
+} from './tools/styles.js';
 import { downloadImage } from './tools/download.js';
 import { generateAsset, batchGenerateAssets, generateThemedSet } from './tools/pipeline.js';
 import { generateSized, compareStyles, textureSwap } from './tools/advanced.js';
@@ -37,11 +45,13 @@ import { explore, exploreSimilar, enhancePrompt } from './tools/explore.js';
 
 import { RecraftClientError } from './client.js';
 import {
-  MODELS,
-  SUPPORTED_SIZES,
-  SUPPORTED_RATIOS,
   ALL_STYLES,
+  IMAGE_STYLES,
+  IMAGE_SUBSTYLES,
+  MODELS,
   STYLE_BASE_TYPES,
+  SUPPORTED_RATIOS,
+  SUPPORTED_SIZES,
 } from './constants.js';
 
 const server = new McpServer({
@@ -128,6 +138,32 @@ const controlsSchema = z
 // 1. CHECK CREDITS
 // =============================================================================
 
+const previewSchema = z
+  .boolean()
+  .optional()
+  .describe(
+    'Return a small inline preview of the result so it can actually be looked at. ' +
+      'Defaults to true. Set false to save context when the image is not being judged.',
+  );
+
+const styleSchema = z
+  .string()
+  .optional()
+  .describe(
+    `Broad style family. One of: ${IMAGE_STYLES.join(', ')}. ` +
+      'A specific look (e.g. pixel_art, kawaii, b_and_w) belongs in `substyle`, ' +
+      'but passing one here is accepted and routed to the right field.',
+  );
+
+const substyleSchema = z
+  .string()
+  .optional()
+  .describe(
+    `Specific look within the family — ${IMAGE_SUBSTYLES.length} values, validated strictly. ` +
+      `Common ones: ${IMAGE_SUBSTYLES.slice(0, 12).join(', ')}. ` +
+      'An invalid value returns the full list.',
+  );
+
 server.registerTool(
   'recraft_check_credits',
   {
@@ -158,12 +194,8 @@ server.registerTool(
       model: modelSchema,
       size: sizeSchema,
       n: nSchema,
-      style: z
-        .string()
-        .optional()
-        .describe(
-          'Style name (V3/V2 only). E.g., photorealism, illustration, vector_art, pixel_art, icon',
-        ),
+      style: styleSchema,
+      substyle: substyleSchema,
       style_id: z
         .string()
         .optional()
@@ -172,12 +204,31 @@ server.registerTool(
       response_format: responseFormatSchema,
       text_layout: textLayoutSchema,
       controls: controlsSchema,
+      preview: previewSchema,
     }),
   },
   async (params) => {
     try {
       const result = await generateImage(params);
-      return { content: [{ type: 'text', text: result }] };
+      const content: Array<
+        { type: 'text'; text: string } | { type: 'image'; data: string; mimeType: string }
+      > = [{ type: 'text', text: result }];
+
+      // Without this the model gets a URL and has to take the result on
+      // faith — it can ask for four variations and judge none of them.
+      if (params.preview !== false) {
+        const urls = [...result.matchAll(/\*\*URL:\*\* (\S+)/g)].map((m) => m[1]);
+        const { previews, omitted } = await previewFromUrls(urls);
+        content.push(...previews);
+        if (omitted > 0) {
+          content.push({
+            type: 'text' as const,
+            text: `(${omitted} more image(s) not previewed — see the URLs above.)`,
+          });
+        }
+      }
+
+      return { content };
     } catch (e) {
       return { content: [{ type: 'text', text: handleError(e) }], isError: true };
     }
@@ -204,7 +255,8 @@ server.registerTool(
         .describe('Transform strength: 0=keep original, 1=fully regenerate'),
       model: z.string().default('recraftv3').describe('Model (V3 only)'),
       n: nSchema,
-      style: z.string().optional().describe('Style name (V3 only)'),
+      style: styleSchema,
+      substyle: substyleSchema,
       style_id: z.string().optional().describe('Custom style UUID'),
       negative_prompt: z.string().optional().describe('What to exclude'),
       response_format: responseFormatSchema,
@@ -237,7 +289,8 @@ server.registerTool(
       prompt: z.string().describe('What to generate in the masked region'),
       model: z.string().default('recraftv3').describe('Model (V3 only)'),
       n: nSchema,
-      style: z.string().optional().describe('Style name'),
+      style: styleSchema,
+      substyle: substyleSchema,
       style_id: z.string().optional().describe('Custom style UUID'),
       negative_prompt: z.string().optional().describe('What to exclude'),
       response_format: responseFormatSchema,
@@ -269,7 +322,8 @@ server.registerTool(
       prompt: z.string().describe('Description of the new background'),
       model: z.string().default('recraftv3').describe('Model (V3 only)'),
       n: nSchema,
-      style: z.string().optional().describe('Style name'),
+      style: styleSchema,
+      substyle: substyleSchema,
       style_id: z.string().optional().describe('Custom style UUID'),
       negative_prompt: z.string().optional().describe('What to exclude'),
       response_format: responseFormatSchema,
@@ -302,7 +356,8 @@ server.registerTool(
       prompt: z.string().describe('Description of background to generate'),
       model: z.string().default('recraftv3').describe('Model (V3 only)'),
       n: nSchema,
-      style: z.string().optional().describe('Style name'),
+      style: styleSchema,
+      substyle: substyleSchema,
       style_id: z.string().optional().describe('Custom style UUID'),
       negative_prompt: z.string().optional().describe('What to exclude'),
       response_format: responseFormatSchema,
@@ -504,6 +559,76 @@ server.registerTool(
 // =============================================================================
 
 server.registerTool(
+  'recraft_list_styles',
+  {
+    description:
+      'List the custom styles on this account, with their ids and base styles. ' +
+      'Free — reads only. Use this before creating a new style to avoid paying for a duplicate.',
+    inputSchema: z.object({}),
+  },
+  async () => {
+    try {
+      return { content: [{ type: 'text', text: await listStyles() }] };
+    } catch (e) {
+      return { content: [{ type: 'text', text: handleError(e) }], isError: true };
+    }
+  },
+);
+
+server.registerTool(
+  'recraft_get_style',
+  {
+    description: 'Look up one custom style by its id. Free — reads only.',
+    inputSchema: z.object({
+      style_id: z.string().describe('Style UUID, as returned by recraft_create_style'),
+    }),
+  },
+  async ({ style_id }) => {
+    try {
+      return { content: [{ type: 'text', text: await getStyle(style_id) }] };
+    } catch (e) {
+      return { content: [{ type: 'text', text: handleError(e) }], isError: true };
+    }
+  },
+);
+
+server.registerTool(
+  'recraft_delete_style',
+  {
+    description:
+      'Delete a custom style permanently. Not reversible — any saved reference to the id stops working. ' +
+      'Useful for clearing styles left behind by recraft_generate_themed_set, which creates one per run.',
+    inputSchema: z.object({
+      style_id: z.string().describe('Style UUID to delete'),
+    }),
+  },
+  async ({ style_id }) => {
+    try {
+      return { content: [{ type: 'text', text: await deleteStyle(style_id) }] };
+    } catch (e) {
+      return { content: [{ type: 'text', text: handleError(e) }], isError: true };
+    }
+  },
+);
+
+server.registerTool(
+  'recraft_list_basic_styles',
+  {
+    description:
+      "List Recraft's own built-in styles per model, live from the API. " +
+      'Free — reads only. Prefer this over any hardcoded list when you need to know what is actually available.',
+    inputSchema: z.object({}),
+  },
+  async () => {
+    try {
+      return { content: [{ type: 'text', text: await listBasicStyles() }] };
+    } catch (e) {
+      return { content: [{ type: 'text', text: handleError(e) }], isError: true };
+    }
+  },
+);
+
+server.registerTool(
   'recraft_download_image',
   {
     description:
@@ -541,7 +666,8 @@ server.registerTool(
         .boolean()
         .default(true)
         .describe('Remove background after generation (default: true)'),
-      style: z.string().optional().describe('Style name (V3/V2 only)'),
+      style: styleSchema,
+      substyle: substyleSchema,
       negative_prompt: z.string().optional().describe('What to exclude'),
     }),
   },
@@ -574,7 +700,8 @@ server.registerTool(
             size: z.string().optional().describe('Image size'),
             model: z.string().optional().describe('Model to use'),
             remove_bg: z.boolean().optional().describe('Remove background (default: true)'),
-            style: z.string().optional().describe('Style name'),
+            style: styleSchema,
+      substyle: substyleSchema,
             negative_prompt: z.string().optional().describe('What to exclude'),
           }),
         )
@@ -680,7 +807,8 @@ server.registerTool(
         .default('contain')
         .describe('Resize strategy: contain (letterbox), cover (crop to fill), fill (stretch)'),
       model: modelSchema,
-      style: z.string().optional().describe('Style name (V3/V2 only)'),
+      style: styleSchema,
+      substyle: substyleSchema,
       style_id: z.string().optional().describe('Custom style UUID'),
       negative_prompt: z.string().optional().describe('What to exclude'),
       remove_bg: z
@@ -765,7 +893,8 @@ server.registerTool(
       prompt: z.string().describe('Description of replacement content'),
       output_path: z.string().describe('Where to save the result'),
       model: modelSchema,
-      style: z.string().optional().describe('Style name (V3/V2 only)'),
+      style: styleSchema,
+      substyle: substyleSchema,
       style_id: z.string().optional().describe('Custom style UUID'),
       negative_prompt: z.string().optional().describe('What to exclude'),
       feather: z
@@ -846,7 +975,8 @@ server.registerTool(
         .default('recraftv3')
         .describe('Model (V3 only): recraftv3, recraftv3_vector'),
       n: nSchema,
-      style: z.string().optional().describe('Style name'),
+      style: styleSchema,
+      substyle: substyleSchema,
       style_id: z.string().optional().describe('Custom style UUID'),
       negative_prompt: z.string().optional().describe('What to exclude'),
       response_format: responseFormatSchema,

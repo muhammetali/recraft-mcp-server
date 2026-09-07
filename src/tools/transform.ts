@@ -3,15 +3,16 @@ import { basename } from 'path';
 import { recraftPostMultipart } from '../client.js';
 import { ENDPOINTS, UPLOAD_TIMEOUT_MS, MAX_DIMENSION_PX } from '../constants.js';
 import {
-  validatePrompt,
+  getMimeType,
+  resolveStyle,
   validateFilePath,
-  validateSize,
   validateModel,
   validateN,
-  validateStyle,
-  validateStrength,
+  validatePrompt,
   validateResponseFormat,
-  getMimeType,
+  validateSize,
+  validateStrength,
+  validateStyle,
 } from '../validation.js';
 import type { GenerateControls, TextLayout } from './generate.js';
 
@@ -69,6 +70,7 @@ export interface ImageToImageParams {
   model?: string;
   n?: number;
   style?: string;
+  substyle?: string;
   style_id?: string;
   negative_prompt?: string;
   response_format?: string;
@@ -84,6 +86,7 @@ export async function imageToImage(params: ImageToImageParams): Promise<string> 
     model = 'recraftv3',
     n = 1,
     style,
+    substyle,
     style_id,
     negative_prompt,
     response_format = 'url',
@@ -106,7 +109,9 @@ export async function imageToImage(params: ImageToImageParams): Promise<string> 
     n,
     response_format,
   };
-  if (style) formParams.style = style;
+  const resolvedStyle = resolveStyle(style, substyle);
+  if (resolvedStyle.style) formParams.style = resolvedStyle.style;
+  if (resolvedStyle.substyle) formParams.substyle = resolvedStyle.substyle;
   if (style_id) formParams.style_id = style_id;
   if (negative_prompt) formParams.negative_prompt = negative_prompt;
   if (text_layout) formParams.text_layout = text_layout;
@@ -126,6 +131,7 @@ export interface InpaintParams {
   model?: string;
   n?: number;
   style?: string;
+  substyle?: string;
   style_id?: string;
   negative_prompt?: string;
   response_format?: string;
@@ -141,6 +147,7 @@ export async function inpaint(params: InpaintParams): Promise<string> {
     model = 'recraftv3',
     n = 1,
     style,
+    substyle,
     style_id,
     negative_prompt,
     response_format = 'url',
@@ -159,7 +166,9 @@ export async function inpaint(params: InpaintParams): Promise<string> {
   const formParams: Record<string, any> = {
     prompt, model, n, response_format,
   };
-  if (style) formParams.style = style;
+  const resolvedStyle = resolveStyle(style, substyle);
+  if (resolvedStyle.style) formParams.style = resolvedStyle.style;
+  if (resolvedStyle.substyle) formParams.substyle = resolvedStyle.substyle;
   if (style_id) formParams.style_id = style_id;
   if (negative_prompt) formParams.negative_prompt = negative_prompt;
   if (text_layout) formParams.text_layout = text_layout;
@@ -178,6 +187,7 @@ export interface ReplaceBackgroundParams {
   model?: string;
   n?: number;
   style?: string;
+  substyle?: string;
   style_id?: string;
   negative_prompt?: string;
   response_format?: string;
@@ -192,6 +202,7 @@ export async function replaceBackground(params: ReplaceBackgroundParams): Promis
     model = 'recraftv3',
     n = 1,
     style,
+    substyle,
     style_id,
     negative_prompt,
     response_format = 'url',
@@ -209,7 +220,9 @@ export async function replaceBackground(params: ReplaceBackgroundParams): Promis
   const formParams: Record<string, any> = {
     prompt, model, n, response_format,
   };
-  if (style) formParams.style = style;
+  const resolvedStyle = resolveStyle(style, substyle);
+  if (resolvedStyle.style) formParams.style = resolvedStyle.style;
+  if (resolvedStyle.substyle) formParams.substyle = resolvedStyle.substyle;
   if (style_id) formParams.style_id = style_id;
   if (negative_prompt) formParams.negative_prompt = negative_prompt;
   if (text_layout) formParams.text_layout = text_layout;
@@ -229,6 +242,7 @@ export interface GenerateBackgroundParams {
   model?: string;
   n?: number;
   style?: string;
+  substyle?: string;
   style_id?: string;
   negative_prompt?: string;
   response_format?: string;
@@ -244,6 +258,7 @@ export async function generateBackground(params: GenerateBackgroundParams): Prom
     model = 'recraftv3',
     n = 1,
     style,
+    substyle,
     style_id,
     negative_prompt,
     response_format = 'url',
@@ -262,7 +277,9 @@ export async function generateBackground(params: GenerateBackgroundParams): Prom
   const formParams: Record<string, any> = {
     prompt, model, n, response_format,
   };
-  if (style) formParams.style = style;
+  const resolvedStyle = resolveStyle(style, substyle);
+  if (resolvedStyle.style) formParams.style = resolvedStyle.style;
+  if (resolvedStyle.substyle) formParams.substyle = resolvedStyle.substyle;
   if (style_id) formParams.style_id = style_id;
   if (negative_prompt) formParams.negative_prompt = negative_prompt;
   if (text_layout) formParams.text_layout = text_layout;
@@ -287,6 +304,7 @@ export interface OutpaintParams {
   model?: string;
   n?: number;
   style?: string;
+  substyle?: string;
   style_id?: string;
   negative_prompt?: string;
   response_format?: string;
@@ -307,6 +325,7 @@ export async function outpaint(params: OutpaintParams): Promise<string> {
     model = 'recraftv3',
     n = 1,
     style,
+    substyle,
     style_id,
     negative_prompt,
     response_format = 'url',
@@ -348,7 +367,9 @@ export async function outpaint(params: OutpaintParams): Promise<string> {
   if (expand_top !== undefined) formParams.expand_top = expand_top;
   if (expand_bottom !== undefined) formParams.expand_bottom = expand_bottom;
   if (zoom_out_percentage !== undefined) formParams.zoom_out_percentage = zoom_out_percentage;
-  if (style) formParams.style = style;
+  const resolvedStyle = resolveStyle(style, substyle);
+  if (resolvedStyle.style) formParams.style = resolvedStyle.style;
+  if (resolvedStyle.substyle) formParams.substyle = resolvedStyle.substyle;
   if (style_id) formParams.style_id = style_id;
   if (negative_prompt) formParams.negative_prompt = negative_prompt;
   if (text_layout) formParams.text_layout = text_layout;

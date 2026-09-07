@@ -2,7 +2,14 @@ import { writeFileSync, unlinkSync, existsSync, readFileSync, mkdirSync } from '
 import { dirname, join } from 'path';
 import { recraftPost, recraftPostMultipart, downloadToBuffer } from '../client.js';
 import { ENDPOINTS, BATCH_DELAY_MS } from '../constants.js';
-import { validatePrompt, validateSize, validateModel, validateOutputPath, resolveSize } from '../validation.js';
+import {
+  resolveSize,
+  resolveStyle,
+  validateModel,
+  validateOutputPath,
+  validatePrompt,
+  validateSize,
+} from '../validation.js';
 import type { GenerationResult, BgRemoveResult, CreateStyleResult } from '../types.js';
 
 export interface GenerateAssetParams {
@@ -12,6 +19,7 @@ export interface GenerateAssetParams {
   model?: string;
   remove_bg?: boolean;
   style?: string;
+  substyle?: string;
   negative_prompt?: string;
 }
 
@@ -23,6 +31,7 @@ export async function generateAsset(params: GenerateAssetParams): Promise<string
     model = 'recraftv4',
     remove_bg = true,
     style,
+    substyle,
     negative_prompt,
   } = params;
 
@@ -36,7 +45,9 @@ export async function generateAsset(params: GenerateAssetParams): Promise<string
   // Step 1: Generate
   const resolvedSize = resolveSize(size, model);
   const body: Record<string, any> = { prompt, model, size: resolvedSize, n: 1, response_format: 'url' };
-  if (style) body.style = style;
+  const resolvedStyle = resolveStyle(style, substyle);
+  if (resolvedStyle.style) body.style = resolvedStyle.style;
+  if (resolvedStyle.substyle) body.substyle = resolvedStyle.substyle;
   if (negative_prompt) body.negative_prompt = negative_prompt;
 
   const genResult = await recraftPost<GenerationResult>(ENDPOINTS.GENERATIONS, body);
@@ -94,6 +105,7 @@ export interface BatchAssetItem {
   model?: string;
   remove_bg?: boolean;
   style?: string;
+  substyle?: string;
   negative_prompt?: string;
 }
 
@@ -106,6 +118,12 @@ export async function batchGenerateAssets(assets: BatchAssetItem[]): Promise<str
 
   for (const asset of assets) {
     try {
+      // `generateAsset` requires the directory to already exist, and a batch
+      // is exactly the case where it usually does not: the caller names a
+      // fresh output folder and expects the tool to fill it. Without this,
+      // every asset in the batch failed with "Output directory does not
+      // exist" — the flagship pipeline tool never worked on a new folder.
+      mkdirSync(asset.output_dir, { recursive: true });
       const outputPath = join(asset.output_dir, `${asset.name}.png`);
       await generateAsset({
         prompt: asset.prompt,

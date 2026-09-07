@@ -140,7 +140,10 @@ describe('tools/pipeline', () => {
 
       const [, options] = vi.mocked(fetch).mock.calls[0];
       const body = JSON.parse((options as any).body);
-      expect(body.style).toBe('photorealism');
+      // `photorealism` is a name from the old flattened style list. Recraft's
+      // real family for it is `realistic_image`, so the resolver translates
+      // rather than forwarding a name the API does not define.
+      expect(body.style).toBe('realistic_image');
       expect(body.negative_prompt).toBe('no text');
     });
   });
