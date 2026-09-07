@@ -12,9 +12,51 @@ generation API — generate, transform, upscale, and vectorize images without le
 > "Remove the background from this screenshot and upscale it."
 > "Create 5 style variations of this logo and put them in a comparison grid."
 
+## Coming from the official server?
+
+Recraft **archived** `@recraft-ai/mcp-recraft-server` in July 2026 and now points
+users at a hosted endpoint, `https://mcp.recraft.ai/mcp`. Which of the three you
+want depends on what you are doing:
+
+| | Recraft hosted | This server |
+|---|---|---|
+| Setup | OAuth in a browser, no API key | npm install + API key |
+| Tools | 9 | **28** |
+| Billing | Subscription credits | API units, and every tool reports what its call cost |
+| Local files | No — URLs and base64 only | Reads and writes files on your machine |
+| Batch / pipelines | No | Generate → download → background-remove → save, themed sets, comparison grids |
+| Style management | Create only | Create, list, inspect, delete |
+
+If you only generate the occasional image, the hosted server is less work and
+this one has nothing to offer you. If you are producing assets in bulk, working
+from files already on disk, or need to know what a run costs before it runs,
+that is what this exists for.
+
+### Tool name mapping
+
+The names are the old ones with a `recraft_` prefix, except where noted:
+
+| Official (archived) | Here |
+|---|---|
+| `generate_image` | `recraft_generate_image` |
+| `image_to_image` | `recraft_image_to_image` |
+| `remove_background` | `recraft_remove_background` |
+| `replace_background` | `recraft_replace_background` |
+| `crisp_upscale` | `recraft_crisp_upscale` |
+| `creative_upscale` | `recraft_creative_upscale` |
+| `create_style` | `recraft_create_style` |
+| `vectorize_image` | `recraft_vectorize` |
+| `get_user` | `recraft_check_credits` |
+
+One behavioural difference worth knowing: Recraft's `style` field takes six
+broad families, and the specific look (`pixel_art`, `kawaii`, `b_and_w`…) is a
+separate `substyle` field. Passing a substyle name as `style` is silently
+ignored by the API. This server accepts either and routes it correctly, so
+prompts written against the old servers keep working.
+
 ## 🌟 Key Features
 
-- 🖼️ **Text-to-image generation** across all Recraft models (V4.1, V4 Styles, V4, V4 Vector/SVG, V4 Pro, V3, V2), 70+ styles
+- 🖼️ **Text-to-image generation** across all Recraft models (V4.1, V4 Styles, V4, V4 Vector/SVG, V4 Pro, V3, V2), with the full style taxonomy — 6 families × 104 substyles, generated from Recraft's own API spec rather than transcribed by hand
 - 🔁 **Image transformation** — image-to-image, inpaint, background replace/generate, outpaint (canvas expansion), variations
 - ✨ **Enhancement** — background removal, vectorization, crisp/creative upscale, region erase
 - 🔎 **Discovery** — open-ended exploration generation, "more like this," and automatic prompt enhancement
@@ -61,7 +103,17 @@ This MCP server exposes 24 tools to your AI agent — full coverage of the Recra
 | `recraft_creative_upscale` | AI-detail upscale with face refinement for photos |
 | `recraft_erase_region` | Content-aware removal of a masked region |
 
-### Styles, assets & account
+### Style management
+
+| Tool | What it does |
+| --- | --- |
+| `recraft_create_style` | Create a custom style from 1-5 reference images |
+| `recraft_list_styles` | List the custom styles on the account — free, reads only |
+| `recraft_get_style` | Look up one style by id — free, reads only |
+| `recraft_delete_style` | Delete a style permanently |
+| `recraft_list_basic_styles` | Recraft's built-in styles per model, live from the API |
+
+### Assets & account
 | Tool | Description |
 |---|---|
 | `recraft_create_style` | Build a custom, reusable style from 1–5 reference images |

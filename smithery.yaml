@@ -1,0 +1,23 @@
+# Smithery listing. Smithery is where people search for MCP servers by
+# capability rather than by package name, and this project was absent from
+# it — the slot for "Recraft" was held by the official server, which its own
+# authors archived in July 2026 in favour of a hosted endpoint.
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    required:
+      - recraftApiKey
+    properties:
+      recraftApiKey:
+        type: string
+        title: Recraft API key
+        description: >-
+          From https://www.recraft.ai/profile/api. Billed per operation in
+          API units; every tool reports what its call cost.
+  commandFunction: |-
+    (config) => ({
+      command: 'node',
+      args: ['dist/index.js'],
+      env: { RECRAFT_API_KEY: config.recraftApiKey }
+    })
