@@ -2,6 +2,7 @@
 import './runtime-security.js';
 import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 import { McpServer } from '@modelcontextprotocol/server';
+import { readFileSync } from 'node:fs';
 import { z } from 'zod';
 import { config } from 'dotenv';
 import { resolve, dirname } from 'path';
@@ -54,11 +55,22 @@ import {
   SUPPORTED_SIZES,
 } from './constants.js';
 
+// Read rather than restate. This was a hardcoded '1.2.0' that had to be
+// remembered alongside package.json on every release — the protocol test
+// caught the drift, which is the only reason it did not ship wrong.
+// `package.json` sits one level above both `src/` and `dist/`, so this
+// resolves the same in development and in the published package.
+const { version } = JSON.parse(
+  readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
+) as { version: string };
+
+const TOOL_COUNT = 28;
+
 const server = new McpServer({
   name: 'recraft-mcp-server',
-  version: '1.2.0',
+  version,
   description:
-    'Recraft AI Image Generation MCP Server — Generate, transform, vectorize, upscale images with 24 tools.',
+    `Recraft AI Image Generation MCP Server — Generate, transform, vectorize, upscale images with ${TOOL_COUNT} tools.`,
 });
 
 // ─── Error handling ─────────────────────────────────────────────────────────
