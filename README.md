@@ -158,6 +158,31 @@ Or add it manually to your MCP client config:
 |----------|-------------|
 | `RECRAFT_API_KEY` | Your Recraft AI API key |
 
+### Docker
+
+```bash
+docker build -t recraft-mcp-server .
+docker run -i --rm -e RECRAFT_API_KEY=your-key recraft-mcp-server
+```
+
+In an MCP client config:
+
+```json
+{
+  "mcpServers": {
+    "recraft": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "-e", "RECRAFT_API_KEY", "recraft-mcp-server"],
+      "env": { "RECRAFT_API_KEY": "your-key" }
+    }
+  }
+}
+```
+
+The container talks MCP over stdio and never opens a port, so `-i` is
+required and `-p` is not. It runs as an unprivileged user; tools that write
+files need the target directory bind-mounted (`-v /path:/path`).
+
 ## 🤖 Example AI Prompts
 
 **Game asset pipeline:**
