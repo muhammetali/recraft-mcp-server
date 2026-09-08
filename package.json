@@ -55,9 +55,9 @@
     "start": "node dist/index.js",
     "clean": "rm -rf dist",
     "test": "vitest run",
-    "test:protocol": "node --test scripts/protocol.test.mjs",
+    "test:scripts": "node --test scripts/*.test.mjs",
     "check:security": "node scripts/check-security.mjs",
-    "verify": "npm run build && npm test && npm run test:protocol && npm run check:security && npm run audit:security",
+    "verify": "npm run build && npm test && npm run test:scripts && npm run check:security && npm run audit:security",
     "prepublishOnly": "npm run verify",
     "audit:security": "npm audit --audit-level=low",
     "test:watch": "vitest"
