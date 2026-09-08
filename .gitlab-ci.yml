@@ -2,23 +2,23 @@ image: node:24
 
 stages:
   - test
-  - publish
 
+# GitLab runs the tests; it does not publish.
+#
+# There used to be a `publish` stage here that ran `npm publish` on every
+# `v*` tag — the same trigger GitHub Actions uses in `.github/workflows/
+# publish.yml`. Two systems publishing one package is a race that only ever
+# has one winner: whichever gets there second fails with "You cannot publish
+# over the previously published versions", which is exactly what happened
+# when the tags were first mirrored here.
+#
+# GitHub is where releases come from, because that is where the npm
+# provenance attestation is generated — npm records that a tarball was built
+# by a specific workflow in a specific repository, and a second publisher
+# cannot produce that same claim. This repository is a mirror; it verifies,
+# it does not release.
 test:
   stage: test
   script:
     - npm ci
     - npm run verify
-
-publish:
-  stage: publish
-  id_tokens:
-    NPM_ID_TOKEN:
-      aud: "npm:registry.npmjs.org"
-    SIGSTORE_ID_TOKEN:
-      aud: sigstore
-  script:
-    - npm ci
-    - npm publish
-  rules:
-    - if: '$CI_COMMIT_TAG =~ /^v/'
