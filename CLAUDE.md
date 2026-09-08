@@ -77,3 +77,33 @@ For `sharp` mocking (in `tools-advanced.test.ts`), the entire mock must be defin
 ## Environment
 
 Requires `RECRAFT_API_KEY` set in `.env` or environment. The `.env` is loaded from the package root directory.
+
+## Releases
+
+Releases are automatic. `semantic-release` runs on every push to `main`,
+reads the commits since the last release, and decides from them whether to
+publish a patch, a minor, a major — or nothing at all. There is no version
+number to bump: `package.json` reads `0.0.0-development`, and the real
+version is written at release time.
+
+This makes the commit message load-bearing:
+
+- `fix:` → patch
+- `feat:` → minor
+- a `BREAKING CHANGE:` footer, or `!` after the type → major
+- anything else (`docs:`, `chore:`, `ci:`, `test:`, `refactor:`) → no release
+
+A commit that does not parse as a Conventional Commit does not fail loudly —
+it silently contributes nothing to the next release, and if every commit in a
+push is unparseable, no release happens at all and nobody is told why. The
+`commit-messages` job in `security.yml` checks this on pull requests so it
+surfaces there instead.
+
+`main` is protected: no direct pushes, and the full `verify` gate has to pass
+before a merge. Work goes through a branch and a pull request.
+
+Do not add a workflow that publishes on a `v*` tag. semantic-release creates
+those tags itself, so such a workflow would publish the same version a second
+time and fail with "You cannot publish over the previously published
+versions" — which is exactly what happened when this project briefly had two
+publishers.
