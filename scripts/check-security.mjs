@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import ts from 'typescript';
+import { loadSyntax, scanSource } from './source-scan.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const readJson = (path) => JSON.parse(readFileSync(join(root, path), 'utf8'));
@@ -38,40 +38,34 @@ for (const [path, entry] of Object.entries(lock.packages)) {
 
 // Review new executable code, not comments or tool descriptions. This is a
 // regression guard for direct uses, not a general-purpose malware detector.
+// The scan itself lives in source-scan.mjs, which has its own tests — this
+// gate had none for as long as it existed.
+const syntax = await loadSyntax();
+
 function checkSource(directory) {
-  for (const entry of readdirSync(directory, { withFileTypes: true })) {
-    const path = join(directory, entry.name);
-    if (entry.isDirectory()) {
-      if (entry.name !== '__tests__') checkSource(path);
-      continue;
-    }
-    if (!entry.name.endsWith('.ts')) continue;
-    const source = ts.createSourceFile(
-      path,
-      readFileSync(path, 'utf8'),
-      ts.ScriptTarget.Latest,
-      true,
-    );
-    function visit(node) {
-      if (ts.isStringLiteral(node) && /^(node:)?(child_process|vm)$/.test(node.text)) {
-        assert.fail(`Shell/VM module requires security review: ${path}`);
+  const problems = [];
+  const walk = (dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name !== '__tests__') walk(path);
+        continue;
       }
-      if (ts.isCallExpression(node) || ts.isNewExpression(node)) {
-        const callee = node.expression;
-        const name = ts.isIdentifier(callee)
-          ? callee.text
-          : ts.isPropertyAccessExpression(callee)
-            ? callee.name.text
-            : '';
-        assert.ok(
-          !['eval', 'Function', 'exec', 'execSync', 'spawn', 'spawnSync'].includes(name),
-          `Dynamic execution requires security review: ${name} in ${path}`,
+      if (!entry.name.endsWith('.ts')) continue;
+      for (const finding of scanSource(readFileSync(path, 'utf8'), syntax)) {
+        problems.push(
+          finding.rule === 'restricted-module'
+            ? `Shell/VM module requires security review: ${finding.detail} at ${path}:${finding.line}`
+            : `Dynamic execution requires security review: ${finding.detail} at ${path}:${finding.line}`,
         );
       }
-      ts.forEachChild(node, visit);
     }
-    visit(source);
-  }
+  };
+  walk(directory);
+
+  // Report every file at once. Failing on the first hides how much there is
+  // to review, which matters when a dependency update rewrites several.
+  assert.deepEqual(problems, [], `\n${problems.join('\n')}`);
 }
 checkSource(join(root, 'src'));
 

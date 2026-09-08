@@ -9,7 +9,8 @@ npm run build          # TypeScript → dist/ (tsc)
 npm run dev            # Run with tsx (hot reload)
 npm start              # Production: node dist/index.js
 npm test               # Run all tests (vitest)
-npm run verify         # Required release gate: build, tests, protocol, policy, audit
+npm run verify         # Required release gate: build, tests, script tests, policy, audit
+npm run test:scripts   # node --test over scripts/*.test.mjs (stdio protocol, source scan)
 npm run test:watch     # Watch mode
 npx vitest run src/__tests__/tools-advanced.test.ts  # Single test file
 ```
@@ -25,6 +26,14 @@ or dependency forks. Keep `runtime-security.ts` imported before SDK initializati
 Never claim zero Socket warnings from an npm audit result. Do not silence or hide
 alerts to pass review. The policy file is a review boundary, not an auto-update file.
 All 24 tool contracts and both tested stdio protocol versions must keep working.
+
+`scripts/source-scan.mjs` reads TypeScript's scanner, and does so through
+whichever major version is installed: 5.x exposes it from the package entry
+point, 7.x only from `typescript/unstable/ast`, and the two disagree on both
+the numeric `SyntaxKind` values and at least one member name. Never hardcode a
+token number there, and add renamed members to `REQUIRED_KINDS` rather than
+reading them inline — an unresolved kind used to turn the scan loop into an
+infinite one, which failed the release gate by hanging rather than erroring.
 
 This is an MCP (Model Context Protocol) server exposing 24 tools for AI image generation via the Recraft API. It communicates over stdio.
 
