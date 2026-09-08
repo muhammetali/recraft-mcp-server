@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.3.1 — 2026-09-08
+
+- Document previews and cost reporting in the README. Both shipped in 1.3.0
+  with no mention anywhere — the one feature that lets an agent look at what it
+  generated was undiscoverable, and the per-call credit cost equally so.
+- Correct the tool count in the README, which still said 24.
+- Add a test that fails when a registered tool is missing from the README, or
+  when the stated count drifts from the real one. Documentation gaps are quiet:
+  nothing breaks, the hole just sits there.
+
 ## 1.3.0 — 2026-09-08
 
 ### Fixed

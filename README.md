@@ -62,10 +62,13 @@ prompts written against the old servers keep working.
 - 🔎 **Discovery** — open-ended exploration generation, "more like this," and automatic prompt enhancement
 - 🧩 **Asset pipelines** — one-call generate → download → background-remove → save, batch generation, themed asset sets with style consistency
 - 🎮 **Game-dev extras** — sized generation for sprites/icons, style comparison grids, texture/atlas swapping
+- 👁️ **The agent can see what it made** — generations come back with an inline preview alongside the URL, downscaled to fit a context budget. Without it a model can produce four variations and judge none of them
+- 💰 **Every call reports its price** — Recraft states the credit cost of each operation and this passes it through, so an agent can tell a 4-credit crisp upscale from a 250-credit creative one *before* it runs a batch of them
+- 🎨 **Style management** — create custom styles, then list, inspect and delete them
 
 ## 🛠️ Provided Tools
 
-This MCP server exposes 24 tools to your AI agent — full coverage of the Recraft API.
+This MCP server exposes 28 tools to your AI agent — full coverage of the Recraft API.
 
 ### Generation
 | Tool | Description |
@@ -120,6 +123,35 @@ This MCP server exposes 24 tools to your AI agent — full coverage of the Recra
 | `recraft_generate_asset` | Full pipeline: generate → download → optional bg-removal → save to file |
 | `recraft_download_image` | Save an image URL to a local file |
 | `recraft_check_credits` | Check account info and remaining API credits |
+
+## Previews and cost
+
+Two behaviours worth knowing about, because they change what the agent can do.
+
+**Previews.** Generation tools return a small inline image alongside the URL, so
+the model can actually look at the result — pick the best of four variations,
+notice that the background removal left a halo, see that the text came out
+garbled. Previews are downscaled until they fit a context budget (WebP, longest
+edge ≤768px, ≤700KB of base64) and capped at four per call, because an
+unbounded base64 blob costs more context than the image is worth.
+
+Turn it off per call when the image is not being judged:
+
+```
+recraft_generate_image(prompt: "...", preview: false)
+```
+
+**Cost.** Every Recraft response states the credit cost of the call it served,
+and every tool here passes it through:
+
+```
+Model: recraftv4 | Size: 1024x1024 | Substyle: kawaii | Cost: 40 credits
+```
+
+This matters more than it sounds. A creative upscale costs 250 credits against
+a crisp upscale's 4 — 62× — and a themed set of 12 symbols runs to roughly 600.
+`recraft_check_credits` reads the balance, and the style-management tools are
+free reads, so an agent can look before it spends.
 
 ## ⚙️ Quick Start
 
